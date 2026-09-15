@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>달력형 스케줄러</title>
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+  <main class="app">
+    <header class="topbar"><div><p class="eyebrow">SCHEDULE</p><h1>내 일정</h1></div><button id="todayBtn" class="today-btn">오늘</button></header>
+    <section class="calendar-card">
+      <div class="calendar-header"><div class="month-title"><button id="prevBtn" class="nav-btn">‹</button><h2 id="monthTitle"></h2><button id="nextBtn" class="nav-btn">›</button></div><button id="addBtn" class="add-btn">＋ 일정 추가</button></div>
+      <div class="weekdays"><div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div></div>
+      <div id="calendar" class="calendar-grid"></div>
+    </section>
+  </main>
+  <div id="modal" class="modal hidden">
+    <div class="modal-backdrop"></div>
+    <form id="scheduleForm" class="modal-box">
+      <div class="modal-head"><div><p class="eyebrow">SCHEDULE</p><h3 id="modalTitle">일정 추가</h3></div><button type="button" id="closeBtn" class="close-btn">×</button></div>
+      <label>날짜<input id="dateInput" type="date" required></label>
+      <label>일정 제목<input id="titleInput" type="text" placeholder="예: 거래처 미팅" maxlength="60" required></label>
+      <label>시간<input id="timeInput" type="time" step="60"></label>
+      <p class="time-help">시간을 선택하거나 직접 입력하세요. 예: 14:30</p>
+      <label>메모<textarea id="memoInput" rows="4" placeholder="추가 메모를 입력하세요"></textarea></label>
+      <label>이미지<input id="imageInput" type="file" accept="image/*"></label>
+      <div id="imagePreviewWrap" class="image-preview-wrap hidden"><img id="imagePreview" class="image-preview" alt="일정 이미지 미리보기"><button type="button" id="removeImageBtn" class="remove-image-btn">이미지 제거</button></div>
+      <p class="time-help">JPG, PNG, GIF, WebP 등의 이미지를 등록할 수 있습니다. 이미지가 너무 크면 자동으로 축소 저장됩니다.</p>
+      <div class="form-actions"><button type="button" id="deleteBtn" class="delete-btn hidden">삭제</button><div><button type="button" id="cancelBtn" class="cancel-btn">취소</button><button type="submit" class="save-btn">저장</button></div></div>
+    </form>
+  </div>
+  <div id="imageViewer" class="image-viewer hidden"><div class="image-viewer-backdrop"></div><div class="image-viewer-box"><button id="imageViewerClose" class="image-viewer-close">×</button><img id="imageViewerImg" alt="일정 이미지"></div></div>
+  <script src="script.js"></script>
+</body>
+</html>
