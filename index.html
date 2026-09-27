@@ -1,72 +1,142 @@
 <!DOCTYPE html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>달력형 스케줄러</title>
-  <link rel="stylesheet" href="style.css">
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>달력 스케줄러</title>
+<link rel="stylesheet" href="style.css">
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
-  <main class="app">
-    <header class="topbar"><div><p class="eyebrow">SCHEDULE</p><h1>내 일정</h1></div><button id="todayBtn" class="today-btn">오늘</button></header>
+<div id="authScreen" class="auth-screen">
+  <div class="auth-card">
+    <h1>달력 스케줄러</h1>
+    <p>로그인 후 일정을 관리하세요.</p>
 
-    <section class="calendar-card">
-      <div class="calendar-header"><div class="month-title"><button id="prevBtn" class="nav-btn">‹</button><h2 id="monthTitle"></h2><button id="nextBtn" class="nav-btn">›</button></div><button id="addBtn" class="add-btn">＋ 일정 추가</button></div>
-      <div class="weekdays"><div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div></div>
-      <div id="calendar" class="calendar-grid"></div>
-    </section>
+    <div id="authMessage" class="auth-message"></div>
 
-    <section class="schedule-list-card">
-      <div class="list-header">
-        <div>
-          <p class="eyebrow">SCHEDULE LIST</p>
-          <h2>등록된 일정</h2>
-        </div>
-        <div class="date-filter" id="dateFilter">
-          <button type="button" class="date-nav-btn" id="prevScheduleDate">‹</button>
-          <input type="date" id="scheduleDatePicker">
-          <button type="button" class="date-today-btn" id="todayScheduleDate">오늘</button>
-          <button type="button" class="date-nav-btn" id="nextScheduleDate">›</button>
-        </div>
-        <div class="category-filter" id="categoryFilter">
-          <button type="button" class="category-chip filter-btn active" data-filter="all">전체</button>
-          <button type="button" class="category-chip filter-btn cpf" data-filter="CPF 지원">CPF 지원</button>
-          <button type="button" class="category-chip filter-btn accident" data-filter="차량사고">차량사고</button>
-          <button type="button" class="category-chip filter-btn issue" data-filter="이슈">이슈</button>
-        </div>
-      </div>
-      <p id="filterDescription" class="filter-description">선택한 날짜의 일정을 확인하고 있습니다.</p>
-      <div id="scheduleSummary" class="schedule-summary"></div>
-    </section>
-  </main>
-
-  <div id="modal" class="modal hidden">
-    <div class="modal-backdrop"></div>
-    <form id="scheduleForm" class="modal-box">
-      <div class="modal-head"><div><p class="eyebrow">SCHEDULE</p><h3 id="modalTitle">일정 추가</h3></div><button type="button" id="closeBtn" class="close-btn">×</button></div>
-      <label>날짜<input id="dateInput" type="date" required></label>
-      <label>카테고리
-        <select id="categoryInput" required>
-          <option value="CPF 지원">CPF 지원</option>
-          <option value="차량사고">차량사고</option>
-          <option value="이슈">이슈</option>
-        </select>
+    <form id="loginForm">
+      <label>아이디
+        <input type="text" id="loginUsername" required autocomplete="username" placeholder="아이디">
       </label>
-      <label>일정 제목<input id="titleInput" type="text" placeholder="예: 거래처 미팅" maxlength="60" required></label>
-      <label>시간<input id="timeInput" type="time" step="60"></label>
-      <p class="time-help">시간을 선택하거나 직접 입력하세요. 예: 14:30</p>
-      <label>메모<textarea id="memoInput" rows="4" placeholder="추가 메모를 입력하세요"></textarea></label>
-      <label>이미지 <span class="label-sub">여러 장 선택 가능</span><input id="imageInput" type="file" accept="image/*" multiple></label>
-      <div id="imagePreviewWrap" class="image-preview-wrap hidden">
-        <div id="imagePreviewGrid" class="image-preview-grid"></div>
-        <button type="button" id="removeImageBtn" class="remove-image-btn">전체 이미지 제거</button>
-      </div>
-      <p class="time-help">JPG, PNG, GIF, WebP 등을 여러 장 등록할 수 있습니다. 각 이미지는 자동으로 축소 저장됩니다.</p>
-      <div class="form-actions"><button type="button" id="deleteBtn" class="delete-btn hidden">삭제</button><div><button type="button" id="cancelBtn" class="cancel-btn">취소</button><button type="submit" class="save-btn">저장</button></div></div>
+      <label>비밀번호
+        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="비밀번호">
+      </label>
+      <button class="primary-btn" type="submit">로그인</button>
+    </form>
+
+    <div class="auth-divider">처음 사용하는 경우</div>
+
+    <form id="signupForm">
+      <label>아이디
+        <input type="text" id="signupUsername" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" autocomplete="username" placeholder="영문, 숫자, ., _, -">
+      </label>
+      <label>이름
+        <input type="text" id="signupName" required maxlength="50" autocomplete="name" placeholder="이름">
+      </label>
+      <label>비밀번호
+        <input type="password" id="signupPassword" minlength="6" required autocomplete="new-password" placeholder="6자 이상">
+      </label>
+      <label>비밀번호 확인
+        <input type="password" id="signupPasswordConfirm" minlength="6" required autocomplete="new-password" placeholder="비밀번호 다시 입력">
+      </label>
+      <button class="secondary-btn full" type="submit">회원가입</button>
     </form>
   </div>
+</div>
 
-  <div id="imageViewer" class="image-viewer hidden"><div class="image-viewer-backdrop"></div><div class="image-viewer-box"><button id="imageViewerClose" class="image-viewer-close">×</button><img id="imageViewerImg" alt="일정 이미지"><div id="imageViewerCounter" class="image-viewer-counter"></div><button id="viewerPrev" class="viewer-nav viewer-prev">‹</button><button id="viewerNext" class="viewer-nav viewer-next">›</button></div></div>
-  <script src="script.js"></script>
+<div id="appScreen" class="app hidden">
+  <header class="topbar">
+    <div>
+      <h1>달력 스케줄러</h1>
+      <p id="userInfo">로그인 사용자</p>
+    </div>
+    <div class="top-actions">
+      <span id="roleBadge" class="role-badge"></span>
+      <button id="logoutBtn" class="secondary-btn">로그아웃</button>
+    </div>
+  </header>
+
+  <main>
+    <section class="calendar-card">
+      <div class="calendar-head">
+        <button id="prevMonth">‹</button>
+        <h2 id="monthTitle"></h2>
+        <button id="nextMonth">›</button>
+        <button id="todayBtn" class="today-btn">오늘</button>
+      </div>
+      <div class="weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
+      <div id="calendar" class="calendar"></div>
+    </section>
+
+    <section id="memberAdminCard" class="schedule-card hidden">
+      <div class="section-head">
+        <div>
+          <h2>회원 관리</h2>
+          <p id="memberCount">가입 회원</p>
+        </div>
+        <button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button>
+      </div>
+      <div id="memberList" class="member-list"></div>
+    </section>
+
+    <section class="schedule-card">
+      <div class="section-head">
+        <div>
+          <h2 id="selectedDateTitle">일정</h2>
+          <p id="scheduleCount">등록된 일정 0개</p>
+        </div>
+        <button id="addScheduleBtn" class="primary-btn">+ 일정 등록</button>
+      </div>
+
+      <div class="filters">
+        <button class="filter active" data-category="all">전체</button>
+        <button class="filter" data-category="CPF 지원">CPF 지원</button>
+        <button class="filter" data-category="차량사고">차량사고</button>
+        <button class="filter" data-category="이슈">이슈</button>
+      </div>
+      <div id="scheduleList" class="schedule-list"></div>
+    </section>
+  </main>
+</div>
+
+<div id="modal" class="modal hidden">
+  <div class="modal-backdrop"></div>
+  <div class="modal-box">
+    <div class="modal-head">
+      <h2 id="modalTitle">일정 등록</h2>
+      <button id="closeModal" class="icon-btn">×</button>
+    </div>
+    <form id="scheduleForm">
+      <input type="hidden" id="scheduleId">
+      <label>날짜<input type="date" id="scheduleDate" required></label>
+      <label>제목<input type="text" id="scheduleTitle" required></label>
+      <div class="two-col">
+        <div class="category-field">
+          <label>카테고리</label>
+          <input type="hidden" id="scheduleCategory" value="CPF 지원">
+          <div id="categoryOptions" class="category-options" role="radiogroup" aria-label="카테고리">
+            <button type="button" class="category-option cpf active" data-category="CPF 지원" role="radio" aria-checked="true">CPF 지원</button>
+            <button type="button" class="category-option accident" data-category="차량사고" role="radio" aria-checked="false">차량사고</button>
+            <button type="button" class="category-option issue" data-category="이슈" role="radio" aria-checked="false">이슈</button>
+          </div>
+        </div>
+        <label>시작 시간<input type="time" id="startTime"></label>
+      </div>
+      <div class="two-col">
+        <label>종료 시간<input type="time" id="endTime"></label>
+        <label>이미지<input type="file" id="scheduleImages" accept="image/*" multiple></label>
+      </div>
+      <label>내용<textarea id="scheduleDescription" rows="5"></textarea></label>
+      <div id="imagePreview" class="image-preview"></div>
+      <div class="form-actions">
+        <button type="button" id="cancelBtn" class="secondary-btn">취소</button>
+        <button type="submit" class="primary-btn">저장</button>
+      </div>
+    </form>
+  </div>
+</div>
+
+<script src="app.js"></script>
 </body>
 </html>
