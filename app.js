@@ -135,9 +135,10 @@ function renderScheduleList(){
   if(!schedules.length){$("scheduleList").innerHTML=`<div class="empty">이 날짜에는 등록된 일정이 없습니다.</div>`;return}
   $("scheduleList").innerHTML=schedules.map(s=>{
     const time=s.start_time?`${s.start_time.slice(0,5)}${s.end_time?" ~ "+s.end_time.slice(0,5):""}`:"시간 미지정";
+    const author=s.author_username ? (s.author_display_name ? `${s.author_username} (${s.author_display_name})` : s.author_username) : "작성자 정보 없음";
     const imgs=(s.schedule_images||[]).map(i=>{const {data}=db.storage.from(BUCKET).getPublicUrl(i.file_path);return `<div class="image-card"><img src="${data.publicUrl}"><a href="${data.publicUrl}?download=${encodeURIComponent(i.file_name)}" download>다운로드</a></div>`}).join("");
     const canManage=currentProfile?.role==="admin" || s.user_id===currentUser.id;
-    return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}</article>`;
+    return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div><div class="schedule-author">작성자 · ${escapeHtml(author)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}</article>`;
   }).join("");
 }
 
@@ -151,6 +152,7 @@ function closeModal(){$("modal").classList.add("hidden");editingId=null}
 async function saveSchedule(e){
   e.preventDefault();
   const payload={schedule_date:$("scheduleDate").value,title:$("scheduleTitle").value.trim(),category:$("scheduleCategory").value,start_time:$("startTime").value||null,end_time:$("endTime").value||null,description:$("scheduleDescription").value.trim()||null};
+  const authorPayload={user_id:currentUser.id,author_username:currentProfile?.username||null,author_display_name:currentProfile?.display_name||null};
   if(!payload.title){alert("제목을 입력해주세요.");return}
   let scheduleId=editingId;
   if(editingId){
@@ -160,7 +162,7 @@ async function saveSchedule(e){
     const {error}=await db.from("schedules").update({...payload,updated_at:new Date().toISOString()}).eq("id",editingId);
     if(error){alert("수정 실패: "+error.message);return}
   }else{
-    const {data,error}=await db.from("schedules").insert({...payload,user_id:currentUser.id}).select().single();
+    const {data,error}=await db.from("schedules").insert({...payload,...authorPayload}).select().single();
     if(error){alert("등록 실패: "+error.message);return}
     scheduleId=data.id;
   }
@@ -186,6 +188,7 @@ async function startApp(){
   if(!user){$("authScreen").classList.remove("hidden");$("appScreen").classList.add("hidden");return}
   currentUser=user;
   try{await loadProfile()}catch(e){console.error(e);await signOut();showAuthMessage("사용자 프로필을 불러오지 못했습니다. 관리자에게 문의하세요.","error");return}
+  if(!currentProfile){await signOut();showAuthMessage("사용자 프로필을 찾을 수 없습니다. 관리자에게 문의해주세요.","error");return}
   if(currentProfile.role!=="admin" && currentProfile.approval_status!=="approved"){
     await signOut();
     const msg=currentProfile.approval_status==="rejected"
