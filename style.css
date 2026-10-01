@@ -9,3 +9,45 @@
 .schedule-card{background:#fff;border:1px solid var(--line);border-radius:16px;padding:20px;margin-top:20px}.section-head{display:flex;justify-content:space-between;align-items:center}.section-head h2{margin:0 0 4px}.section-head p{margin:0;color:#7c8798;font-size:13px}.member-list{display:flex;flex-direction:column;gap:8px;margin-top:15px}.member-item{display:flex;align-items:center;justify-content:space-between;border:1px solid var(--line);padding:12px;border-radius:10px}.member-username{color:#8791a2;font-size:12px}.member-meta{margin-top:6px;color:#99a2b1;font-size:11px}.approval-badge{padding:3px 6px;border-radius:6px}.approval-badge.approved{background:#eaf8f0;color:#278f59}.approval-badge.rejected{background:#fff0f0;color:#c74a4a}.approval-badge.pending{background:#fff7e8;color:#ad7418}.member-actions{display:flex;gap:5px}.member-note{font-size:11px;color:#3977d0;font-weight:700}
 .modal{position:fixed;inset:0;z-index:100;display:flex;align-items:center;justify-content:center;padding:15px}.modal-backdrop{position:absolute;inset:0;background:rgba(12,23,43,.52);backdrop-filter:blur(3px)}.modal-box{position:relative;background:#fff;width:min(650px,100%);max-height:92vh;overflow:auto;border-radius:20px;padding:24px;box-shadow:0 25px 80px rgba(12,23,43,.2)}.modal-head{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.modal-kicker{font-size:10px;color:#4d89df;font-weight:800;letter-spacing:1.2px}.modal-head h2{margin:3px 0 0;font-size:21px}.icon-btn{border:0;background:#f0f2f5;width:35px;height:35px;border-radius:50%;font-size:22px;color:#536077}.two-col{display:grid;grid-template-columns:1fr 1fr;gap:14px}.category-options{display:flex;gap:8px;margin-top:6px;flex-wrap:wrap}.category-option{flex:1;min-width:92px;height:42px;border:1px solid #e1e5eb;background:#fff;border-radius:9px;font-size:13px;font-weight:700;color:#667186;transition:.15s ease}.category-option.cpf.active{background:#f0e8ff;border-color:#b993ef;color:#7442c5}.category-option.accident.active{background:#eaf3ff;border-color:#8ebcf1;color:#3378d4}.category-option.issue.active{background:#eaf9f1;border-color:#8ed4ad;color:#2e9660}label{display:block;font-size:12px;font-weight:700;margin-bottom:14px;color:#536077}input,textarea{display:block;width:100%;margin-top:6px;border:1px solid #dfe4eb;border-radius:9px;padding:11px 12px;background:#fff;color:var(--text);outline:none}input:focus,textarea:focus{border-color:#83aff0;box-shadow:0 0 0 3px #edf4ff}textarea{resize:vertical}.image-preview{display:flex;flex-wrap:wrap;gap:8px;margin:2px 0 12px}.image-preview img{width:80px;height:60px;object-fit:cover;border-radius:7px}.form-actions{display:flex;justify-content:flex-end;gap:8px;margin-top:8px}
 @media(max-width:1100px){.dashboard{grid-template-columns:1fr}.right-column{display:grid;grid-template-columns:1fr 1fr}.summary-card{grid-column:1/-1}.schedule-list{max-height:none}.sidebar{width:190px}}@media(max-width:760px){.app{display:block}.sidebar{width:100%;height:auto;padding:12px;position:sticky;top:0;z-index:20}.brand-sub,.sidebar-bottom{display:none}.nav-menu{flex-direction:row;overflow:auto}.nav-item{width:auto;white-space:nowrap}.topbar{padding:16px;height:auto}.topbar h1{font-size:15px}.notification,.role-badge{display:none}.dashboard{padding:18px 12px}.calendar-toolbar{display:block}.toolbar-actions{margin-top:12px;flex-wrap:wrap}.month-nav h2{font-size:23px}.calendar-card{overflow-x:auto}.weekdays,.calendar{min-width:700px}.right-column{display:flex}.two-col{grid-template-columns:1fr}}
+
+/* Mobile schedule registration: keep the calendar visible and open the form as a bottom sheet. */
+@media (max-width:760px){
+  .app{padding-bottom:0}
+  .sidebar{position:sticky;top:0}
+  .calendar-card{overflow:hidden}
+  .weekdays,.calendar{min-width:0;width:100%}
+  .day{min-height:82px;padding:7px 5px}
+  .day-number{width:25px;height:25px;font-size:12px}
+  .day-events{margin-top:5px;gap:3px}
+  .day-event{font-size:9px;padding:4px 4px;border-left-width:2px}
+  .toolbar-actions .view-switch{display:none}
+  .toolbar-actions{justify-content:space-between}
+  #addScheduleBtn{position:fixed;right:18px;bottom:18px;z-index:45;border-radius:999px;padding:13px 17px;box-shadow:0 12px 28px rgba(40,120,240,.32)}
+
+  .modal{align-items:flex-end;padding:0;}
+  .modal-backdrop{background:rgba(12,23,43,.42);backdrop-filter:blur(2px)}
+  .modal-box{
+    width:100%;
+    max-width:none;
+    max-height:88vh;
+    border-radius:22px 22px 0 0;
+    padding:12px 16px calc(16px + env(safe-area-inset-bottom));
+    box-shadow:0 -12px 40px rgba(12,23,43,.18);
+    animation:mobileSheetUp .18s ease-out;
+  }
+  .modal-box:before{content:"";display:block;width:42px;height:4px;border-radius:999px;background:#d9dee7;margin:0 auto 10px}
+  .modal-head{margin-bottom:14px;position:sticky;top:0;background:#fff;z-index:2;padding-bottom:8px}
+  .modal-head h2{font-size:19px}
+  .modal-kicker{display:none}
+  .icon-btn{width:34px;height:34px}
+  #scheduleForm{padding-bottom:2px}
+  .two-col{grid-template-columns:1fr}
+  label{margin-bottom:12px;font-size:12px}
+  input,textarea{padding:10px 11px;border-radius:10px}
+  textarea{min-height:88px}
+  .category-options{gap:6px}
+  .category-option{min-width:0;height:40px;font-size:12px}
+  .form-actions{position:sticky;bottom:0;background:#fff;padding-top:10px;margin:2px -16px 0;padding-left:16px;padding-right:16px;z-index:3}
+  .form-actions button{flex:1;height:46px}
+}
+@keyframes mobileSheetUp{from{transform:translateY(18px);opacity:.7}to{transform:translateY(0);opacity:1}}
