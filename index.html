@@ -3,140 +3,136 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>달력 스케줄러</title>
+<title>스케줄러</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 <body>
 <div id="authScreen" class="auth-screen">
   <div class="auth-card">
-    <h1>달력 스케줄러</h1>
+    <div class="brand-mark">▣</div>
+    <h1>스케줄러</h1>
     <p>로그인 후 일정을 관리하세요.</p>
-
     <div id="authMessage" class="auth-message"></div>
-
     <form id="loginForm">
-      <label>아이디
-        <input type="text" id="loginUsername" required autocomplete="username" placeholder="아이디">
-      </label>
-      <label>비밀번호
-        <input type="password" id="loginPassword" required autocomplete="current-password" placeholder="비밀번호">
-      </label>
-      <button class="primary-btn" type="submit">로그인</button>
+      <label>아이디<input type="text" id="loginUsername" required autocomplete="username" placeholder="아이디"></label>
+      <label>비밀번호<input type="password" id="loginPassword" required autocomplete="current-password" placeholder="비밀번호"></label>
+      <button class="primary-btn full" type="submit">로그인</button>
     </form>
-
     <div class="auth-divider">처음 사용하는 경우</div>
-
     <form id="signupForm">
-      <label>아이디
-        <input type="text" id="signupUsername" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" autocomplete="username" placeholder="영문, 숫자, ., _, -">
-      </label>
-      <label>이름
-        <input type="text" id="signupName" required maxlength="50" autocomplete="name" placeholder="이름">
-      </label>
-      <label>비밀번호
-        <input type="password" id="signupPassword" minlength="6" required autocomplete="new-password" placeholder="6자 이상">
-      </label>
-      <label>비밀번호 확인
-        <input type="password" id="signupPasswordConfirm" minlength="6" required autocomplete="new-password" placeholder="비밀번호 다시 입력">
-      </label>
+      <label>아이디<input type="text" id="signupUsername" required minlength="3" maxlength="30" pattern="[A-Za-z0-9._-]+" autocomplete="username" placeholder="영문, 숫자, ., _, -"></label>
+      <label>이름<input type="text" id="signupName" required maxlength="50" autocomplete="name" placeholder="이름"></label>
+      <label>비밀번호<input type="password" id="signupPassword" minlength="6" required autocomplete="new-password" placeholder="6자 이상"></label>
+      <label>비밀번호 확인<input type="password" id="signupPasswordConfirm" minlength="6" required autocomplete="new-password" placeholder="비밀번호 다시 입력"></label>
       <button class="secondary-btn full" type="submit">회원가입</button>
     </form>
   </div>
 </div>
 
 <div id="appScreen" class="app hidden">
-  <header class="topbar">
-    <div>
-      <h1>달력 스케줄러</h1>
-      <p id="userInfo">로그인 사용자</p>
-    </div>
-    <div class="top-actions">
-      <span id="roleBadge" class="role-badge"></span>
-      <button id="logoutBtn" class="secondary-btn">로그아웃</button>
-    </div>
-  </header>
+  <aside class="sidebar">
+    <div class="brand"><span class="brand-icon">▣</span><span>스케줄러</span></div>
+    <div class="brand-sub">함께 만드는 더 나은 일정 관리</div>
+    <nav class="nav-menu">
+      <button class="nav-item active" type="button"><span>▦</span>달력</button>
+      <button class="nav-item" type="button" id="sidebarAddBtn"><span>＋</span>일정 등록</button>
+      <button class="nav-item" type="button" id="sidebarTodayBtn"><span>▤</span>내 일정</button>
+      <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button>
+    </nav>
+    <div class="sidebar-bottom"><button class="nav-item" type="button" id="sidebarLogoutBtn"><span>↪</span>로그아웃</button></div>
+  </aside>
 
-  <main>
-    <section class="calendar-card">
-      <div class="calendar-head">
-        <button id="prevMonth">‹</button>
-        <h2 id="monthTitle"></h2>
-        <button id="nextMonth">›</button>
-        <button id="todayBtn" class="today-btn">오늘</button>
+  <div class="workspace">
+    <header class="topbar">
+      <div>
+        <p class="eyebrow">일정 관리</p>
+        <h1>오늘도 편하게 일정을 관리하세요.</h1>
       </div>
-      <div class="weekdays"><div>일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div>토</div></div>
-      <div id="calendar" class="calendar"></div>
-    </section>
+      <div class="top-actions">
+        <span class="notification">♧<i></i></span>
+        <div class="user-chip"><span class="avatar" id="avatarInitial">U</span><span id="userInfo">로그인 사용자</span><span class="chevron">⌄</span></div>
+        <span id="roleBadge" class="role-badge"></span>
+      </div>
+    </header>
 
-    <section id="memberAdminCard" class="schedule-card hidden">
-      <div class="section-head">
-        <div>
-          <h2>회원 관리</h2>
-          <p id="memberCount">가입 회원</p>
+    <main class="dashboard">
+      <section class="main-column">
+        <div class="calendar-toolbar">
+          <div class="month-nav">
+            <button id="prevMonth" class="circle-btn" aria-label="이전 달">‹</button>
+            <h2 id="monthTitle"></h2>
+            <button id="nextMonth" class="circle-btn" aria-label="다음 달">›</button>
+          </div>
+          <div class="toolbar-actions">
+            <div class="view-switch"><button class="active" type="button">월간</button><button type="button">주간</button><button type="button">일간</button></div>
+            <button id="todayBtn" class="ghost-btn" type="button">오늘</button>
+            <button id="addScheduleBtn" class="primary-btn" type="button">＋ 일정 등록</button>
+          </div>
         </div>
-        <button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button>
-      </div>
-      <div id="memberList" class="member-list"></div>
-    </section>
 
-    <section class="schedule-card">
-      <div class="section-head">
-        <div>
-          <h2 id="selectedDateTitle">일정</h2>
-          <p id="scheduleCount">등록된 일정 0개</p>
-        </div>
-        <button id="addScheduleBtn" class="primary-btn">+ 일정 등록</button>
-      </div>
+        <section class="calendar-card">
+          <div class="weekdays"><div class="sun">일</div><div>월</div><div>화</div><div>수</div><div>목</div><div>금</div><div class="sat">토</div></div>
+          <div id="calendar" class="calendar"></div>
+        </section>
 
-      <div class="filters">
-        <button class="filter active" data-category="all">전체</button>
-        <button class="filter" data-category="CPF 지원">CPF 지원</button>
-        <button class="filter" data-category="차량사고">차량사고</button>
-        <button class="filter" data-category="이슈">이슈</button>
-      </div>
-      <div id="scheduleList" class="schedule-list"></div>
-    </section>
-  </main>
+        <section id="memberAdminCard" class="schedule-card hidden">
+          <div class="section-head"><div><h2>회원 관리</h2><p id="memberCount">가입 회원</p></div><button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button></div>
+          <div id="memberList" class="member-list"></div>
+        </section>
+      </section>
+
+      <aside class="right-column">
+        <section class="side-card filter-card">
+          <div class="side-title"><h3>카테고리 필터</h3></div>
+          <div class="filters">
+            <button class="filter active all" data-category="all">전체</button>
+            <button class="filter cpf" data-category="CPF 지원">CPF 지원</button>
+            <button class="filter accident" data-category="차량사고">차량사고</button>
+            <button class="filter issue" data-category="이슈">이슈</button>
+          </div>
+        </section>
+
+        <section class="side-card selected-card">
+          <div class="side-title"><div><h3>선택한 날짜 일정</h3><p id="selectedDateTitle"></p></div><button id="sideTodayBtn" class="mini-today" type="button">오늘</button></div>
+          <p id="scheduleCount" class="count-text">등록된 일정 0개</p>
+          <div id="scheduleList" class="schedule-list"></div>
+        </section>
+
+        <section class="side-card summary-card">
+          <div class="side-title"><h3>주요 일정 요약</h3></div>
+          <div class="summary-row cpf"><span><b></b>CPF 지원</span><strong id="cpfCount">0건</strong></div>
+          <div class="summary-row accident"><span><b></b>차량사고</span><strong id="accidentCount">0건</strong></div>
+          <div class="summary-row issue"><span><b></b>이슈</span><strong id="issueCount">0건</strong></div>
+        </section>
+      </aside>
+    </main>
+  </div>
 </div>
 
 <div id="modal" class="modal hidden">
   <div class="modal-backdrop"></div>
   <div class="modal-box">
-    <div class="modal-head">
-      <h2 id="modalTitle">일정 등록</h2>
-      <button id="closeModal" class="icon-btn">×</button>
-    </div>
+    <div class="modal-head"><div><span class="modal-kicker">SCHEDULE</span><h2 id="modalTitle">일정 등록</h2></div><button id="closeModal" class="icon-btn">×</button></div>
     <form id="scheduleForm">
       <input type="hidden" id="scheduleId">
       <label>날짜<input type="date" id="scheduleDate" required></label>
       <label>제목<input type="text" id="scheduleTitle" required></label>
       <div class="two-col">
-        <div class="category-field">
-          <label>카테고리</label>
-          <input type="hidden" id="scheduleCategory" value="CPF 지원">
-          <div id="categoryOptions" class="category-options" role="radiogroup" aria-label="카테고리">
-            <button type="button" class="category-option cpf active" data-category="CPF 지원" role="radio" aria-checked="true">CPF 지원</button>
-            <button type="button" class="category-option accident" data-category="차량사고" role="radio" aria-checked="false">차량사고</button>
-            <button type="button" class="category-option issue" data-category="이슈" role="radio" aria-checked="false">이슈</button>
-          </div>
-        </div>
+        <div class="category-field"><label>카테고리</label><input type="hidden" id="scheduleCategory" value="CPF 지원"><div id="categoryOptions" class="category-options" role="radiogroup" aria-label="카테고리">
+          <button type="button" class="category-option cpf active" data-category="CPF 지원" role="radio" aria-checked="true">CPF 지원</button>
+          <button type="button" class="category-option accident" data-category="차량사고" role="radio" aria-checked="false">차량사고</button>
+          <button type="button" class="category-option issue" data-category="이슈" role="radio" aria-checked="false">이슈</button>
+        </div></div>
         <label>시작 시간<input type="time" id="startTime"></label>
       </div>
-      <div class="two-col">
-        <label>종료 시간<input type="time" id="endTime"></label>
-        <label>이미지<input type="file" id="scheduleImages" accept="image/*" multiple></label>
-      </div>
+      <div class="two-col"><label>종료 시간<input type="time" id="endTime"></label><label>이미지<input type="file" id="scheduleImages" accept="image/*" multiple></label></div>
       <label>내용<textarea id="scheduleDescription" rows="5"></textarea></label>
       <div id="imagePreview" class="image-preview"></div>
-      <div class="form-actions">
-        <button type="button" id="cancelBtn" class="secondary-btn">취소</button>
-        <button type="submit" class="primary-btn">저장</button>
-      </div>
+      <div class="form-actions"><button type="button" id="cancelBtn" class="secondary-btn">취소</button><button type="submit" class="primary-btn">저장</button></div>
     </form>
   </div>
 </div>
-
 <script src="app.js"></script>
 </body>
 </html>
