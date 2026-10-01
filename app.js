@@ -72,6 +72,9 @@ async function loadProfile(){
   currentProfile=data;
   $("userInfo").textContent=`${data.display_name || "사용자"} · @${data.username}`;
   $("roleBadge").textContent=data.role==="admin"?"관리자":"일반 사용자";
+  const initial=String(data.display_name || data.username || "U").trim().charAt(0).toUpperCase();
+  if($("avatarInitial")) $("avatarInitial").textContent=initial;
+  document.querySelectorAll(".admin-nav").forEach(el=>el.classList.toggle("hidden",data.role!=="admin"));
 }
 
 async function loadMembers(){
@@ -105,7 +108,17 @@ async function loadSchedules(){
   const {data,error}=await db.from("schedules").select(`*, schedule_images(id,file_name,file_path,created_at)`).order("schedule_date",{ascending:true}).order("start_time",{ascending:true,nullsFirst:true});
   if(error){console.error(error);alert("일정을 불러오지 못했습니다.\n"+error.message);return}
   allSchedules=data||[];
+  updateSummary();
   renderCalendar();renderScheduleList();
+}
+
+
+function updateSummary(){
+  const counts={"CPF 지원":0,"차량사고":0,"이슈":0};
+  allSchedules.forEach(s=>{if(counts[s.category]!==undefined) counts[s.category]++;});
+  if($("cpfCount")) $("cpfCount").textContent=`${counts["CPF 지원"]}건`;
+  if($("accidentCount")) $("accidentCount").textContent=`${counts["차량사고"]}건`;
+  if($("issueCount")) $("issueCount").textContent=`${counts["이슈"]}건`;
 }
 
 function renderCalendar(){
@@ -118,7 +131,7 @@ function renderCalendar(){
     if(d.getMonth()!==m)day.classList.add("other");if(v===today)day.classList.add("today");if(v===selected)day.classList.add("selected");
     day.innerHTML=`<span class="day-number">${d.getDate()}</span><div class="day-events"></div>`;
     const ev=day.querySelector(".day-events");
-    allSchedules.filter(s=>s.schedule_date===v).slice(0,3).forEach(s=>{const e=document.createElement("div");e.className=`day-event ${categoryClass(s.category)}`;e.textContent=s.title;ev.appendChild(e)});
+    allSchedules.filter(s=>s.schedule_date===v).slice(0,3).forEach(s=>{const e=document.createElement("div");e.className=`day-event ${categoryClass(s.category)}`;const t=s.start_time?s.start_time.slice(0,5)+" ":"";e.textContent=t+s.title;ev.appendChild(e)});
     day.onclick=()=>{selectedDate=new Date(`${v}T12:00:00`);currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);activeCategory="all";document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));document.querySelector('[data-category="all"]').classList.add("active");renderCalendar();renderScheduleList()};
     cal.appendChild(day);
   }
@@ -205,14 +218,19 @@ async function startApp(){
 
 $("loginForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();try{await signIn($("loginUsername").value,$("loginPassword").value);await startApp()}catch(err){showAuthMessage("로그인 실패: "+err.message,"error")}};
 $("signupForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();const username=normalizeUsername($("signupUsername").value);const name=$("signupName").value.trim();const password=$("signupPassword").value;const confirm=$("signupPasswordConfirm").value;if(password!==confirm){showAuthMessage("비밀번호가 일치하지 않습니다.","error");return}if(!/^[a-z0-9._-]{3,30}$/.test(username)){showAuthMessage("아이디는 영문 소문자, 숫자, ., _, -만 사용해 3~30자로 입력해주세요.","error");return}if(!name){showAuthMessage("이름을 입력해주세요.","error");return}try{await signUp(username,name,password);showAuthMessage("회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.","success");$("signupForm").reset();$("loginUsername").value=username}catch(err){showAuthMessage("회원가입 실패: "+(err.message||err),"error")}};
-$("logoutBtn").onclick=signOut;
+if($("logoutBtn")) $("logoutBtn").onclick=signOut;
 $("refreshMembersBtn").onclick=loadMembers;
 db.auth.onAuthStateChange((_event,session)=>{if(session){currentUser=session.user;startApp()}else{currentUser=null;currentProfile=null;$("authScreen").classList.remove("hidden");$("appScreen").classList.add("hidden")}});
 
 $("prevMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1);renderCalendar()};
 $("nextMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1);renderCalendar()};
 $("todayBtn").onclick=()=>{selectedDate=new Date();currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);renderCalendar();renderScheduleList()};
-$("addScheduleBtn").onclick=()=>openModal();$("closeModal").onclick=closeModal;$("cancelBtn").onclick=closeModal;
+$("addScheduleBtn").onclick=()=>openModal();
+$("sidebarAddBtn").onclick=()=>openModal();
+$("sidebarTodayBtn").onclick=()=>{$("todayBtn").click()};
+$("sideTodayBtn").onclick=()=>{$("todayBtn").click()};
+$("sidebarMemberBtn").onclick=()=>{$("memberAdminCard").scrollIntoView({behavior:"smooth",block:"start"});};
+$("sidebarLogoutBtn").onclick=signOut;$("closeModal").onclick=closeModal;$("cancelBtn").onclick=closeModal;
 $("modal").querySelector(".modal-backdrop").onclick=closeModal;$("scheduleForm").onsubmit=saveSchedule;
 $("scheduleImages").onchange=()=>{$("imagePreview").innerHTML="";Array.from($("scheduleImages").files||[]).forEach(f=>{const i=document.createElement("img");i.src=URL.createObjectURL(f);$("imagePreview").appendChild(i)})};
 initCategoryOptions();
