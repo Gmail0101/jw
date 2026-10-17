@@ -16,12 +16,15 @@ let selectedDate = new Date();
 let allSchedules = [];
 let activeCategory = "all";
 let editingId = null;
+let lightboxImages = [];
+let lightboxIndex = 0;
+let lightboxTouchStartX = null;
 
 const $ = id => document.getElementById(id);
 
 function dateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function formatDateKR(v){const [y,m,d]=v.split("-");return `${y}년 ${Number(m)}월 ${Number(d)}일`}
-function categoryClass(c){return c==="CPF 지원"?"cpf":c==="차량사고"?"accident":"issue"}
+function categoryClass(c){return ({"CPF 지원":"cpf","차량사고":"accident","이슈":"issue","신규입차자(신입)":"new-hire","퇴사":"resignation"})[c]||"issue"}
 
 function setCategory(value){
   const input=$("scheduleCategory");
@@ -114,11 +117,13 @@ async function loadSchedules(){
 
 
 function updateSummary(){
-  const counts={"CPF 지원":0,"차량사고":0,"이슈":0};
+  const counts={"CPF 지원":0,"차량사고":0,"이슈":0,"신규입차자(신입)":0,"퇴사":0};
   allSchedules.forEach(s=>{if(counts[s.category]!==undefined) counts[s.category]++;});
   if($("cpfCount")) $("cpfCount").textContent=`${counts["CPF 지원"]}건`;
   if($("accidentCount")) $("accidentCount").textContent=`${counts["차량사고"]}건`;
   if($("issueCount")) $("issueCount").textContent=`${counts["이슈"]}건`;
+  if($("newHireCount")) $("newHireCount").textContent=`${counts["신규입차자(신입)"]}건`;
+  if($("resignationCount")) $("resignationCount").textContent=`${counts["퇴사"]}건`;
 }
 
 function renderCalendar(){
@@ -149,10 +154,44 @@ function renderScheduleList(){
   $("scheduleList").innerHTML=schedules.map(s=>{
     const time=s.start_time?`${s.start_time.slice(0,5)}${s.end_time?" ~ "+s.end_time.slice(0,5):""}`:"시간 미지정";
     const author=s.author_username ? (s.author_display_name ? `${s.author_username} (${s.author_display_name})` : s.author_username) : "작성자 정보 없음";
-    const imgs=(s.schedule_images||[]).map(i=>{const {data}=db.storage.from(BUCKET).getPublicUrl(i.file_path);return `<div class="image-card"><img src="${data.publicUrl}"><a href="${data.publicUrl}?download=${encodeURIComponent(i.file_name)}" download>다운로드</a></div>`}).join("");
+    const imgs=(s.schedule_images||[]).map(i=>{const {data}=db.storage.from(BUCKET).getPublicUrl(i.file_path);return `<div class="image-card"><img src="${data.publicUrl}" alt="${escapeHtml(i.file_name)}"><a href="${data.publicUrl}?download=${encodeURIComponent(i.file_name)}" download>다운로드</a></div>`}).join("");
     const canManage=currentProfile?.role==="admin" || s.user_id===currentUser.id;
     return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div><div class="schedule-author">작성자 · ${escapeHtml(author)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}</article>`;
   }).join("");
+}
+
+function openImageLightbox(src, caption="", images=null, startIndex=0){
+  if(!src) return;
+  lightboxImages = Array.isArray(images) && images.length ? images : [{src, caption}];
+  lightboxIndex = Math.max(0, Math.min(startIndex, lightboxImages.length - 1));
+  renderLightboxImage();
+  $("imageLightbox").classList.remove("hidden");
+  document.body.classList.add("image-lightbox-open");
+}
+function renderLightboxImage(){
+  if(!lightboxImages.length) return;
+  const item=lightboxImages[lightboxIndex];
+  $("lightboxImage").src=item.src;
+  $("lightboxImage").alt=item.caption || "확대된 일정 이미지";
+  $("lightboxCaption").textContent=lightboxImages.length>1
+    ? `${item.caption || "일정 이미지"}  ·  ${lightboxIndex+1} / ${lightboxImages.length}`
+    : (item.caption || "");
+  const multiple=lightboxImages.length>1;
+  $("lightboxPrev").classList.toggle("hidden",!multiple);
+  $("lightboxNext").classList.toggle("hidden",!multiple);
+  $("lightboxCounter").classList.toggle("hidden",!multiple);
+  $("lightboxCounter").textContent=`${lightboxIndex+1} / ${lightboxImages.length}`;
+}
+function moveLightbox(step){
+  if(lightboxImages.length<2) return;
+  lightboxIndex=(lightboxIndex+step+lightboxImages.length)%lightboxImages.length;
+  renderLightboxImage();
+}
+function closeImageLightbox(){
+  $("imageLightbox").classList.add("hidden");
+  $("lightboxImage").src="";
+  lightboxImages=[]; lightboxIndex=0;
+  document.body.classList.remove("image-lightbox-open");
 }
 
 function openModal(s=null){
@@ -229,10 +268,55 @@ $("addScheduleBtn").onclick=()=>openModal();
 $("sidebarAddBtn").onclick=()=>openModal();
 $("sidebarTodayBtn").onclick=()=>{$("todayBtn").click()};
 $("sideTodayBtn").onclick=()=>{$("todayBtn").click()};
-$("sidebarMemberBtn").onclick=()=>{$("memberAdminCard").scrollIntoView({behavior:"smooth",block:"start"});};
+function setWorkspaceView(view){
+  const app=$("appScreen");
+  app.classList.toggle("member-view",view==="members");
+  document.querySelectorAll(".nav-menu .nav-item").forEach(btn=>btn.classList.remove("active"));
+  const active=view==="members"?$("sidebarMemberBtn"):$("sidebarCalendarBtn");
+  if(active)active.classList.add("active");
+  if(view==="members"){
+    if(currentProfile?.role!=="admin"){
+      alert("회원 관리는 관리자만 이용할 수 있습니다.");
+      setWorkspaceView("calendar");
+      return;
+    }
+    $("memberAdminCard").classList.remove("hidden");
+    loadMembers();
+  }
+}
+$("sidebarMemberBtn").onclick=()=>setWorkspaceView("members");
+$("sidebarCalendarBtn").onclick=()=>setWorkspaceView("calendar");
 $("sidebarLogoutBtn").onclick=signOut;$("closeModal").onclick=closeModal;$("cancelBtn").onclick=closeModal;
 $("modal").querySelector(".modal-backdrop").onclick=closeModal;$("scheduleForm").onsubmit=saveSchedule;
 $("scheduleImages").onchange=()=>{$("imagePreview").innerHTML="";Array.from($("scheduleImages").files||[]).forEach(f=>{const i=document.createElement("img");i.src=URL.createObjectURL(f);$("imagePreview").appendChild(i)})};
+// 일정에 등록된 여러 이미지는 확대 화면에서 좌우 슬라이드로 확인할 수 있습니다.
+document.addEventListener("click",e=>{
+  const img=e.target.closest(".image-card img, #imagePreview img");
+  if(img){
+    e.preventDefault();
+    const group=img.closest(".images, #imagePreview");
+    const groupImages=group ? Array.from(group.querySelectorAll("img")).map((el,i)=>({src:el.src,caption:el.alt || `일정 이미지 ${i+1}`})) : [];
+    const index=Math.max(0,groupImages.findIndex(item=>item.src===img.src));
+    openImageLightbox(img.src,img.alt || "일정 이미지",groupImages,index);
+    return;
+  }
+  if(e.target.closest("[data-close-image]")) closeImageLightbox();
+});
+$("lightboxPrev").onclick=()=>moveLightbox(-1);
+$("lightboxNext").onclick=()=>moveLightbox(1);
+$("imageLightbox").addEventListener("touchstart",e=>{lightboxTouchStartX=e.changedTouches[0].clientX;},{passive:true});
+$("imageLightbox").addEventListener("touchend",e=>{
+  if(lightboxTouchStartX===null)return;
+  const delta=e.changedTouches[0].clientX-lightboxTouchStartX;
+  if(Math.abs(delta)>45)moveLightbox(delta<0?1:-1);
+  lightboxTouchStartX=null;
+},{passive:true});
+document.addEventListener("keydown",e=>{
+  if($("imageLightbox").classList.contains("hidden"))return;
+  if(e.key==="Escape")closeImageLightbox();
+  else if(e.key==="ArrowRight")moveLightbox(1);
+  else if(e.key==="ArrowLeft")moveLightbox(-1);
+});
 initCategoryOptions();
 document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{activeCategory=b.dataset.category;document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderScheduleList()});
 
