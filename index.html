@@ -35,7 +35,7 @@
     <div class="brand"><span class="brand-icon">▣</span><span>스케줄러</span></div>
     <div class="brand-sub">함께 만드는 더 나은 일정 관리</div>
     <nav class="nav-menu">
-      <button class="nav-item active" type="button"><span>▦</span>달력</button>
+      <button class="nav-item active" type="button" id="sidebarCalendarBtn"><span>▦</span>달력</button>
       <button class="nav-item" type="button" id="sidebarAddBtn"><span>＋</span>일정 등록</button>
       <button class="nav-item" type="button" id="sidebarTodayBtn"><span>▤</span>내 일정</button>
       <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button>
@@ -90,6 +90,8 @@
             <button class="filter cpf" data-category="CPF 지원">CPF 지원</button>
             <button class="filter accident" data-category="차량사고">차량사고</button>
             <button class="filter issue" data-category="이슈">이슈</button>
+            <button class="filter new-hire" data-category="신규입차자(신입)">신규입차자(신입)</button>
+            <button class="filter resignation" data-category="퇴사">퇴사</button>
           </div>
         </section>
 
@@ -104,6 +106,8 @@
           <div class="summary-row cpf"><span><b></b>CPF 지원</span><strong id="cpfCount">0건</strong></div>
           <div class="summary-row accident"><span><b></b>차량사고</span><strong id="accidentCount">0건</strong></div>
           <div class="summary-row issue"><span><b></b>이슈</span><strong id="issueCount">0건</strong></div>
+          <div class="summary-row new-hire"><span><b></b>신규입차자(신입)</span><strong id="newHireCount">0건</strong></div>
+          <div class="summary-row resignation"><span><b></b>퇴사</span><strong id="resignationCount">0건</strong></div>
         </section>
       </aside>
     </main>
@@ -123,6 +127,8 @@
           <button type="button" class="category-option cpf active" data-category="CPF 지원" role="radio" aria-checked="true">CPF 지원</button>
           <button type="button" class="category-option accident" data-category="차량사고" role="radio" aria-checked="false">차량사고</button>
           <button type="button" class="category-option issue" data-category="이슈" role="radio" aria-checked="false">이슈</button>
+          <button type="button" class="category-option new-hire" data-category="신규입차자(신입)" role="radio" aria-checked="false">신규입차자(신입)</button>
+          <button type="button" class="category-option resignation" data-category="퇴사" role="radio" aria-checked="false">퇴사</button>
         </div></div>
         <label>시작 시간<input type="time" id="startTime"></label>
       </div>
@@ -132,6 +138,16 @@
       <div class="form-actions"><button type="button" id="cancelBtn" class="secondary-btn">취소</button><button type="submit" class="primary-btn">저장</button></div>
     </form>
   </div>
+</div>
+
+<div id="imageLightbox" class="image-lightbox hidden" role="dialog" aria-modal="true" aria-label="이미지 확대 보기">
+  <div class="image-lightbox-backdrop" data-close-image></div>
+  <button type="button" class="image-lightbox-close" data-close-image aria-label="이미지 닫기">×</button>
+  <button type="button" id="lightboxPrev" class="image-lightbox-nav prev hidden" aria-label="이전 이미지">‹</button>
+  <img id="lightboxImage" src="" alt="확대된 일정 이미지">
+  <button type="button" id="lightboxNext" class="image-lightbox-nav next hidden" aria-label="다음 이미지">›</button>
+  <div id="lightboxCounter" class="image-lightbox-counter hidden"></div>
+  <div id="lightboxCaption" class="image-lightbox-caption"></div>
 </div>
 <script src="app.js"></script>
 </body>
