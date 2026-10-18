@@ -282,6 +282,8 @@ function setWorkspaceView(view){
     }
     $("memberAdminCard").classList.remove("hidden");
     loadMembers();
+  } else {
+    $("memberAdminCard").classList.add("hidden");
   }
 }
 $("sidebarMemberBtn").onclick=()=>setWorkspaceView("members");
