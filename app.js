@@ -20,6 +20,10 @@ let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchStartX = null;
 let peopleRecords = [];
+let memberRecords = [];
+let peoplePage = 1;
+let memberPage = 1;
+const PAGE_SIZE = 10;
 const PEOPLE_REGIONS = ["대전", "서울", "경기"];
 const CUSTOM_REGION_VALUE = "__custom__";
 
@@ -87,17 +91,38 @@ async function loadMembers(){
   if(currentProfile?.role!=="admin")return;
   const {data,error}=await db.from("profiles").select("id,username,display_name,role,approval_status,created_at").order("created_at",{ascending:false});
   if(error){alert("회원 목록을 불러오지 못했습니다.\n"+error.message);return}
+  memberRecords=data||[]; memberPage=1;
   $("memberAdminCard").classList.remove("hidden");
-  $("memberCount").textContent=`가입 회원 ${data.length}명`;
-  if(!data.length){$("memberList").innerHTML='<div class="empty">가입 회원이 없습니다.</div>';return}
-  $("memberList").innerHTML=data.map(m=>{
+  $("memberCount").textContent=`가입 회원 ${memberRecords.length}명`;
+  renderMembers();
+}
+function renderMembers(){
+  const list=$("memberList"), pager=$("memberPagination");
+  const total=memberRecords.length, pages=Math.max(1,Math.ceil(total/PAGE_SIZE));
+  memberPage=Math.min(Math.max(1,memberPage),pages);
+  const start=(memberPage-1)*PAGE_SIZE, rows=memberRecords.slice(start,start+PAGE_SIZE);
+  if(!total){list.innerHTML='<div class="empty">가입 회원이 없습니다.</div>';pager.innerHTML='';return}
+  list.innerHTML=rows.map(m=>{
     const status=m.approval_status||"pending";
     const label=status==="approved"?"승인됨":status==="rejected"?"거절됨":"승인 대기";
     const date=m.created_at?new Date(m.created_at).toLocaleDateString("ko-KR"):"";
     const actions=m.role==="admin"?'<span class="member-note">관리자</span>':`<div class="member-actions"><button class="small-btn" onclick="setMemberApproval('${m.id}','approved')">승인</button><button class="small-btn" onclick="setMemberApproval('${m.id}','rejected')">거절</button></div>`;
     return `<div class="member-item"><div><strong>${escapeHtml(m.display_name||"")}</strong> <span class="member-username">@${escapeHtml(m.username||"")}</span><div class="member-meta"><span class="approval-badge ${status}">${label}</span> ${date}</div></div>${actions}</div>`;
   }).join("");
+  pager.innerHTML=renderPager(memberPage,pages,total,'member');
 }
+function renderPager(page,pages,total,kind){
+  if(total<=PAGE_SIZE)return '';
+  const fn=kind==='member'?'goMemberPage':'goPeoplePage';
+  let buttons='';
+  buttons+=`<button type="button" class="page-btn" ${page<=1?'disabled':''} onclick="${fn}(${page-1})">이전</button>`;
+  const from=Math.max(1,page-2),to=Math.min(pages,page+2);
+  for(let p=from;p<=to;p++)buttons+=`<button type="button" class="page-btn ${p===page?'active':''}" onclick="${fn}(${p})">${p}</button>`;
+  buttons+=`<button type="button" class="page-btn" ${page>=pages?'disabled':''} onclick="${fn}(${page+1})">다음</button>`;
+  return `<div class="pagination-info">총 ${total}명 · ${page} / ${pages} 페이지</div><div class="pagination-buttons">${buttons}</div>`;
+}
+function goMemberPage(page){memberPage=page;renderMembers()}
+function goPeoplePage(page){peoplePage=page;renderPeople()}
 
 async function setMemberApproval(id,status){
   if(currentProfile?.role!=="admin")return;
@@ -131,8 +156,11 @@ function renderPeople(){
   const q=($("peopleSearch")?.value||"").trim().toLocaleLowerCase();
   const rows=peopleRecords.filter(r=>(type==="all"||r.event_type===type)&&(region==="all"||r.region===region)&&(shift==="all"||r.shift_type===shift)&&
     (!q||[r.name,r.event_type,r.shift_type,r.event_date,r.region,r.router_code,r.phone,r.status,r.memo,r.manager].some(v=>String(v||"").toLocaleLowerCase().includes(q))));
-  if(!rows.length){$("peopleList").innerHTML='<div class="empty">등록된 신규입차자/퇴사 정보가 없습니다.</div>';return}
-  $("peopleList").innerHTML=rows.map(r=>`<article class="person-row"><div class="person-main"><div class="person-title"><strong>${escapeHtml(r.name)}</strong><span class="person-tag ${r.event_type==="퇴사"?"exit":"hire"}">${escapeHtml(r.event_type)}</span><span class="person-tag shift">${escapeHtml(r.shift_type)}</span><span class="person-status status-${r.status==="완료"?"done":r.status==="취소"?"cancel":"active"}">${escapeHtml(r.status)}</span></div><div class="person-meta">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")} · 연락처 ${escapeHtml(r.phone||"미입력")}</div><div class="person-meta">담당자 · ${escapeHtml(r.manager||"미입력")}${r.memo?` · ${escapeHtml(r.memo)}`:""}</div></div><div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div></article>`).join("");
+  const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));peoplePage=Math.min(Math.max(1,peoplePage),pages);
+  const visibleRows=rows.slice((peoplePage-1)*PAGE_SIZE,peoplePage*PAGE_SIZE);
+  if(!rows.length){$("peopleList").innerHTML='<div class="empty">등록된 신규입차자/퇴사 정보가 없습니다.</div>';$("peoplePagination").innerHTML='';return}
+  $("peopleList").innerHTML=visibleRows.map(r=>`<article class="person-row"><div class="person-main"><div class="person-title"><strong>${escapeHtml(r.name)}</strong><span class="person-tag ${r.event_type==="퇴사"?"exit":"hire"}">${escapeHtml(r.event_type)}</span><span class="person-tag shift">${escapeHtml(r.shift_type)}</span><span class="person-status status-${r.status==="완료"?"done":r.status==="취소"?"cancel":"active"}">${escapeHtml(r.status)}</span></div><div class="person-meta">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")} · 연락처 ${escapeHtml(r.phone||"미입력")}</div><div class="person-meta">담당자 · ${escapeHtml(r.manager||"미입력")}${r.memo?` · ${escapeHtml(r.memo)}`:""}</div></div><div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div></article>`).join("");
+  $("peoplePagination").innerHTML=renderPager(peoplePage,pages,rows.length,'people');
 }
 function openPersonModal(record=null){
   if(currentProfile?.role!=="admin"){alert("관리자만 이용할 수 있습니다.");return}
@@ -326,9 +354,9 @@ $("refreshMembersBtn").onclick=loadMembers;
 fillRegionSelect($("personRegion"));fillRegionSelect($("peopleRegionFilter"),true);
 $("addPersonBtn").onclick=()=>openPersonModal();$("closePersonModal").onclick=()=>$("personModal").classList.add("hidden");$("cancelPersonBtn").onclick=()=>$("personModal").classList.add("hidden");
 $("personModal").querySelectorAll("[data-close-person]").forEach(el=>el.onclick=()=>$("personModal").classList.add("hidden"));$("personForm").onsubmit=savePerson;$("personType").onchange=updatePersonDateLabel;$("personRegion").onchange=toggleCustomRegion;
-["peopleTypeFilter","peopleRegionFilter","peopleShiftFilter"].forEach(id=>$(id).onchange=renderPeople);if($("peopleSearch"))$("peopleSearch").oninput=renderPeople;
-$("resetPeopleFilters").onclick=()=>{$("peopleSearch").value="";$("peopleTypeFilter").value="all";$("peopleRegionFilter").value="all";$("peopleShiftFilter").value="all";renderPeople()};
-$("applyPeopleFilters").onclick=renderPeople;
+["peopleTypeFilter","peopleRegionFilter","peopleShiftFilter"].forEach(id=>$(id).onchange=()=>{peoplePage=1;renderPeople()});if($("peopleSearch"))$("peopleSearch").oninput=()=>{peoplePage=1;renderPeople()};
+$("resetPeopleFilters").onclick=()=>{peoplePage=1;$("peopleSearch").value="";$("peopleTypeFilter").value="all";$("peopleRegionFilter").value="all";$("peopleShiftFilter").value="all";renderPeople()};
+$("applyPeopleFilters").onclick=()=>{peoplePage=1;renderPeople()};
 db.auth.onAuthStateChange((_event,session)=>{if(session){currentUser=session.user;startApp()}else{currentUser=null;currentProfile=null;$("authScreen").classList.remove("hidden");$("appScreen").classList.add("hidden")}});
 
 $("prevMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1);renderCalendar()};
