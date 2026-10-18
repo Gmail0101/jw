@@ -104,3 +104,43 @@ body.image-lightbox-open{overflow:hidden}
   .right-column{display:flex;flex-direction:column;gap:18px;min-width:0}
   .selected-card .schedule-list{max-height:none;overflow:visible}
 }
+
+/* 신규입차자/퇴사 관리 */
+.people-stats{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px;margin:18px 0}.people-stat{background:#f5f8fc;border:1px solid var(--line);border-radius:12px;padding:14px}.people-stat span{display:block;color:#7f8a9d;font-size:12px}.people-stat strong{display:block;margin-top:7px;font-size:24px;color:#243653}.people-filters{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:10px 0 16px}.people-filters label{margin:0}.people-filters select,#personForm select{display:block;width:100%;margin-top:6px;border:1px solid #dfe4eb;border-radius:9px;padding:11px 12px;background:#fff;color:var(--text)}.people-list{display:flex;flex-direction:column;gap:10px}.person-row{display:flex;align-items:center;justify-content:space-between;gap:15px;border:1px solid var(--line);border-radius:12px;padding:15px}.person-title{display:flex;align-items:center;flex-wrap:wrap;gap:7px}.person-title strong{font-size:15px}.person-tag,.person-status{display:inline-flex;align-items:center;padding:4px 8px;border-radius:7px;font-size:11px;font-weight:700}.person-tag.hire{background:#eaf8f0;color:#258852}.person-tag.exit{background:#fff0f1;color:#bd3f53}.person-tag.shift{background:#edf3ff;color:#376ec3}.person-status.status-active{background:#fff5df;color:#9b6b0b}.person-status.status-done{background:#eaf8f0;color:#258852}.person-status.status-cancel{background:#f0f1f4;color:#737d8e}.person-meta{font-size:12px;color:#788499;margin-top:7px;line-height:1.5}.app.people-view .dashboard{grid-template-columns:minmax(0,1fr)}.app.people-view .calendar-toolbar,.app.people-view .calendar-card,.app.people-view .selected-card,.app.people-view .right-column{display:none!important}.app.people-view .main-column{width:100%;min-width:0}.app.people-view #memberAdminCard{display:none!important}.app.people-view #peopleAdminCard{display:block!important;margin-top:0;min-height:calc(100vh - 150px)}
+@media(max-width:760px){.people-stats{grid-template-columns:repeat(2,minmax(0,1fr))}.people-filters{grid-template-columns:1fr}.person-row{align-items:flex-start;flex-direction:column}.person-row .schedule-actions{align-self:flex-end}.app.people-view .dashboard{padding-top:14px}}
+
+
+/* Personnel management search and calendar day-detail cards */
+.people-search-label { flex: 1 1 260px; min-width: 220px; }
+.people-search-label input { display:block; width:100%; margin-top:6px; min-height:42px; padding:10px 12px; border:1px solid var(--border, #dfe3eb); border-radius:10px; background:var(--surface, #fff); color:inherit; font:inherit; box-sizing:border-box; }
+.personnel-schedule-item { border-left:4px solid #2878f0; }
+.personnel-schedule-item.resignation-item { border-left-color:#d9485f; }
+.personnel-schedule-item .schedule-meta { display:flex; flex-wrap:wrap; gap:6px; margin-top:7px; }
+.personnel-schedule-item .badge { display:inline-flex; align-items:center; padding:3px 8px; border-radius:999px; background:#edf4ff; color:#2457a6; font-size:12px; }
+.personnel-schedule-item.resignation-item .badge:first-child { background:#fff0f1; color:#a92f42; }
+@media (max-width: 640px) { .people-search-label { flex-basis:100%; min-width:0; } .personnel-schedule-item .schedule-row { align-items:flex-start; } }
+
+/* Modernized personnel search/filter panel inspired by the supplied mockup */
+.people-filters-panel{margin:22px 0 18px;padding:16px;border:1px solid #e4ecfb;border-radius:20px;background:linear-gradient(135deg,#fff 0%,#f9fbff 100%);box-shadow:0 12px 32px rgba(50,93,160,.07)}
+.people-filters-top{display:grid;grid-template-columns:minmax(260px,1.45fr) minmax(180px,.9fr) minmax(200px,1.15fr);gap:12px}
+.people-filters-bottom{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;margin-top:12px;padding:14px;border:1px solid #e8effc;border-radius:16px;background:linear-gradient(100deg,#fff,#f7faff)}
+.people-filters-panel label{display:block;margin:0;min-width:0}
+.people-filters-panel .filter-heading{display:flex;align-items:center;gap:10px;min-height:54px;margin-bottom:10px}
+.people-filters-panel .filter-heading strong{display:block;font-size:15px;color:#1b2c4b;font-weight:800;letter-spacing:-.2px}
+.people-filters-panel .filter-heading small{display:block;margin-top:4px;color:#8290a9;font-size:11px;font-weight:500}
+.filter-icon{width:42px;height:42px;flex:0 0 42px;display:grid;place-items:center;border-radius:14px;background:#eaf2ff;color:#347cf4;font-size:25px;font-weight:700}
+.type-icon{background:#eaf8f4;color:#42b89e}.region-icon{background:#f0edff;color:#7b70ee}.shift-icon{background:#eaf1ff;color:#347cf4}
+.people-filters-panel input[type=search],.people-filters-panel select{width:100%;height:46px;margin:0;padding:0 14px;border:1px solid #d9e3f5;border-radius:13px;outline:none;background:rgba(255,255,255,.94);color:#263753;font-size:14px;box-shadow:inset 0 1px 2px rgba(24,52,95,.025);transition:border-color .18s,box-shadow .18s}
+.people-filters-panel input[type=search]::placeholder{color:#9ba9bf}
+.people-filters-panel input[type=search]:focus,.people-filters-panel select:focus{border-color:#80adff;box-shadow:0 0 0 4px rgba(64,130,244,.12)}
+.people-filter-label{flex:0 1 360px;min-width:0}
+.people-filters-panel .shift-filter-label .filter-heading{margin-bottom:10px}
+.people-filters-panel .shift-filter-label select{background:#f5f8ff;border-color:#d9e7ff}
+.people-filter-actions{display:flex;justify-content:flex-end;gap:10px;flex:1;min-width:210px}
+.filter-reset-btn,.filter-search-btn{height:46px;padding:0 20px;border-radius:13px;font-weight:750;white-space:nowrap;transition:transform .15s,box-shadow .15s}
+.filter-reset-btn{border:1px solid #d5dfef;background:#fff;color:#71809b}
+.filter-search-btn{border:1px solid #347cf4;background:linear-gradient(135deg,#438af8,#2873ec);color:#fff;box-shadow:0 6px 14px rgba(40,120,240,.18)}
+.filter-reset-btn:hover,.filter-search-btn:hover{transform:translateY(-1px)}
+.region-custom-input{display:block;width:100%;margin-top:8px;padding:10px 12px;border:1px solid #d9e3f5;border-radius:10px;background:#fff;color:var(--text)}
+@media(max-width:900px){.people-filters-top{grid-template-columns:1fr 1fr}.people-search-label{grid-column:1/-1}.people-filters-bottom{align-items:stretch;flex-direction:column}.people-filter-label{flex-basis:auto}.people-filter-actions{min-width:0}}
+@media(max-width:560px){.people-filters-panel{padding:12px;border-radius:16px}.people-filters-top{grid-template-columns:1fr}.people-search-label{grid-column:auto}.people-filters-panel .filter-heading{min-height:42px}.people-filter-actions{display:grid;grid-template-columns:1fr 1fr}.filter-reset-btn,.filter-search-btn{padding:0 10px}}
