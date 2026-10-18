@@ -29,6 +29,21 @@ const CUSTOM_REGION_VALUE = "__custom__";
 
 const $ = id => document.getElementById(id);
 
+
+// 변경 이력은 감사 로그 테이블이 설치된 경우 기록합니다. 로그 실패가 본 작업을 막지는 않습니다.
+async function writeAudit(action, entityType, entityId, details={}) {
+  try { const {error}=await db.from("audit_logs").insert({actor_id:currentUser?.id||null,actor_username:currentProfile?.username||null,action,entity_type:entityType,entity_id:String(entityId??""),details}); if(error) console.warn("감사 로그 기록 실패(SQL 설치 여부 확인):",error.message); } catch(e){console.warn("감사 로그 기록 실패:",e)}
+}
+function downloadCSV(filename, rows) {
+  if(!rows.length){alert("내보낼 데이터가 없습니다.");return}
+  const keys=[...new Set(rows.flatMap(r=>Object.keys(r)))];
+  const cell=v=>{let x=String(v??"");if(/^[=+@\-]/.test(x))x="'"+x;return '"'+x.replace(/"/g,'""')+'"'};
+  const csv="\uFEFF"+[keys.map(cell).join(","),...rows.map(r=>keys.map(k=>cell(r[k])).join(","))].join("\r\n");
+  const url=URL.createObjectURL(new Blob([csv],{type:"text/csv;charset=utf-8;"}));const a=document.createElement("a");a.href=url;a.download=filename;a.click();URL.revokeObjectURL(url);
+}
+function exportPeopleCSV(){downloadCSV(`입차퇴사_현황_${dateString(new Date())}.csv`,peopleRecords.map(r=>({유형:r.event_type,이름:r.name,근무구분:r.shift_type,일자:r.event_date,지역:r.region,라우터코드:r.router_code,연락처:r.phone,상태:r.status,담당자:r.manager,메모:r.memo,등록자:r.created_by,등록ID:r.id})));}
+function exportMembersCSV(){if(currentProfile?.role!=="admin"){alert("관리자만 내보낼 수 있습니다.");return}downloadCSV(`회원목록_${dateString(new Date())}.csv`,memberRecords.map(r=>({아이디:r.username,이름:r.display_name,권한:r.role,승인상태:r.approval_status,가입일:r.created_at,회원ID:r.id})));}
+
 function dateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function formatDateKR(v){const [y,m,d]=v.split("-");return `${y}년 ${Number(m)}월 ${Number(d)}일`}
 function categoryClass(c){return ({"CPF 지원":"cpf","차량사고":"accident","이슈":"issue","신규입차자(신입)":"new-hire","퇴사":"resignation"})[c]||"issue"}
@@ -133,6 +148,7 @@ async function setMemberApproval(id,status){
   if(!confirm(`이 회원을 ${label} 처리할까요?`))return;
   const {error}=await db.from("profiles").update({approval_status:status,updated_at:new Date().toISOString()}).eq("id",id);
   if(error){alert("회원 상태 변경 실패: "+error.message);return}
+  await writeAudit("approval_"+status,"profile",id,{status});
   await loadMembers();
 }
 
@@ -179,10 +195,10 @@ function toggleCustomRegion(){const custom=$("personRegion").value===CUSTOM_REGI
 function editPerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(r)openPersonModal(r)}
 async function savePerson(e){e.preventDefault();if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved"))return;
  const id=$("personId").value;const existing=id?peopleRecords.find(x=>String(x.id)===String(id)):null;if(id&&!existing){alert("수정할 정보를 찾을 수 없습니다.");return}if(existing&&currentProfile.role!=="admin"&&String(existing.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 수정할 수 있습니다.");return}const payload={event_type:$("personType").value,name:$("personName").value.trim(),shift_type:$("personShift").value,event_date:$("personDate").value,region:$("personRegion").value===CUSTOM_REGION_VALUE?$("personRegionCustom").value.trim():$("personRegion").value,router_code:$("personRouter").value.trim()||null,phone:$("personPhone").value.trim()||null,status:$("personStatus").value,memo:$("personMemo").value.trim()||null,manager:$("personManager").value.trim()};
- if(id){const {error}=await db.from("personnel_events").update(payload).eq("id",id);if(error){alert("수정 실패: "+error.message);return}}else{payload.created_by=currentUser.id;const {error}=await db.from("personnel_events").insert(payload);if(error){alert("등록 실패: "+error.message);return}}
+ if(id){const {error}=await db.from("personnel_events").update(payload).eq("id",id);if(error){alert("수정 실패: "+error.message);return}await writeAudit("update","personnel_event",id,payload)}else{payload.created_by=currentUser.id;const {data,error}=await db.from("personnel_events").insert(payload).select("id").single();if(error){alert("등록 실패: "+error.message);return}await writeAudit("create","personnel_event",data?.id,payload)}
  $("personModal").classList.add("hidden");await loadPeople();
 }
-async function deletePerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(!r)return;if(currentProfile?.role!=="admin"&&String(r.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 삭제할 수 있습니다.");return}if(!confirm("이 정보를 삭제할까요?"))return;const {error}=await db.from("personnel_events").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await loadPeople()}
+async function deletePerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(!r)return;if(currentProfile?.role!=="admin"&&String(r.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 삭제할 수 있습니다.");return}if(!confirm("이 정보를 삭제할까요?"))return;const {error}=await db.from("personnel_events").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await writeAudit("delete","personnel_event",id,{name:r.name,event_type:r.event_type});await loadPeople()}
 
 async function loadSchedules(){
   const {data,error}=await db.from("schedules").select(`*, schedule_images(id,file_name,file_path,created_at)`).order("schedule_date",{ascending:true}).order("start_time",{ascending:true,nullsFirst:true});
@@ -308,10 +324,12 @@ async function saveSchedule(e){
     if(currentProfile?.role!=="admin" && existing.user_id!==currentUser.id){alert("본인이 등록한 일정만 수정할 수 있습니다.");return}
     const {error}=await db.from("schedules").update({...payload,updated_at:new Date().toISOString()}).eq("id",editingId);
     if(error){alert("수정 실패: "+error.message);return}
+    await writeAudit("update","schedule",editingId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
   }else{
     const {data,error}=await db.from("schedules").insert({...payload,...authorPayload}).select().single();
     if(error){alert("등록 실패: "+error.message);return}
     scheduleId=data.id;
+    await writeAudit("create","schedule",scheduleId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
   }
   for(const file of Array.from($("scheduleImages").files||[])){
     const safe=file.name.replace(/[^a-zA-Z0-9가-힣._-]/g,"_"),path=`${scheduleId}/${Date.now()}_${crypto.randomUUID()}_${safe}`;
@@ -326,7 +344,7 @@ async function saveSchedule(e){
 async function deleteSchedule(id){
   const s=allSchedules.find(x=>x.id===id);if(!s)return;if(currentProfile?.role!=="admin" && s.user_id!==currentUser.id){alert("본인이 등록한 일정만 삭제할 수 있습니다.");return}if(!confirm(`"${s.title}" 일정을 삭제할까요?`))return;
   const imgs=s.schedule_images||[];if(imgs.length)await db.storage.from(BUCKET).remove(imgs.map(i=>i.file_path));
-  const {error}=await db.from("schedules").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await loadSchedules();
+  const {error}=await db.from("schedules").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await writeAudit("delete","schedule",id,{title:s.title,category:s.category});await loadSchedules();
 }
 function editSchedule(id){const s=allSchedules.find(x=>x.id===id);if(!s)return;if(currentProfile?.role!=="admin" && s.user_id!==currentUser.id){alert("본인이 등록한 일정만 수정할 수 있습니다.");return}openModal(s)}
 
@@ -355,6 +373,8 @@ $("loginForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();try{awai
 $("signupForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();const username=normalizeUsername($("signupUsername").value);const name=$("signupName").value.trim();const password=$("signupPassword").value;const confirm=$("signupPasswordConfirm").value;if(password!==confirm){showAuthMessage("비밀번호가 일치하지 않습니다.","error");return}if(!/^[a-z0-9._-]{3,30}$/.test(username)){showAuthMessage("아이디는 영문 소문자, 숫자, ., _, -만 사용해 3~30자로 입력해주세요.","error");return}if(!name){showAuthMessage("이름을 입력해주세요.","error");return}try{await signUp(username,name,password);showAuthMessage("회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.","success");$("signupForm").reset();$("loginUsername").value=username}catch(err){showAuthMessage("회원가입 실패: "+(err.message||err),"error")}};
 if($("logoutBtn")) $("logoutBtn").onclick=signOut;
 $("refreshMembersBtn").onclick=loadMembers;
+if($("exportPeopleBtn"))$("exportPeopleBtn").onclick=exportPeopleCSV;
+if($("exportMembersBtn"))$("exportMembersBtn").onclick=exportMembersCSV;
 fillRegionSelect($("personRegion"));fillRegionSelect($("peopleRegionFilter"),true);
 $("addPersonBtn").onclick=()=>openPersonModal();$("closePersonModal").onclick=()=>$("personModal").classList.add("hidden");$("cancelPersonBtn").onclick=()=>$("personModal").classList.add("hidden");
 $("personModal").querySelectorAll("[data-close-person]").forEach(el=>el.onclick=()=>$("personModal").classList.add("hidden"));$("personForm").onsubmit=savePerson;$("personType").onchange=updatePersonDateLabel;$("personRegion").onchange=toggleCustomRegion;
