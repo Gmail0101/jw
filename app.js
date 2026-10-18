@@ -85,6 +85,8 @@ async function loadProfile(){
   const initial=String(data.display_name || data.username || "U").trim().charAt(0).toUpperCase();
   if($("avatarInitial")) $("avatarInitial").textContent=initial;
   document.querySelectorAll(".admin-nav").forEach(el=>el.classList.toggle("hidden",data.role!=="admin"));
+  // 신규입차자/퇴사 메뉴는 승인된 일반 사용자도 이용 가능
+  if($("sidebarPeopleBtn")) $("sidebarPeopleBtn").classList.toggle("hidden",data.role!=="admin" && data.approval_status!=="approved");
 }
 
 async function loadMembers(){
@@ -159,11 +161,12 @@ function renderPeople(){
   const pages=Math.max(1,Math.ceil(rows.length/PAGE_SIZE));peoplePage=Math.min(Math.max(1,peoplePage),pages);
   const visibleRows=rows.slice((peoplePage-1)*PAGE_SIZE,peoplePage*PAGE_SIZE);
   if(!rows.length){$("peopleList").innerHTML='<div class="empty">등록된 신규입차자/퇴사 정보가 없습니다.</div>';$("peoplePagination").innerHTML='';return}
-  $("peopleList").innerHTML=visibleRows.map(r=>`<article class="person-row"><div class="person-main"><div class="person-title"><strong>${escapeHtml(r.name)}</strong><span class="person-tag ${r.event_type==="퇴사"?"exit":"hire"}">${escapeHtml(r.event_type)}</span><span class="person-tag shift">${escapeHtml(r.shift_type)}</span><span class="person-status status-${r.status==="완료"?"done":r.status==="취소"?"cancel":"active"}">${escapeHtml(r.status)}</span></div><div class="person-meta">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")} · 연락처 ${escapeHtml(r.phone||"미입력")}</div><div class="person-meta">담당자 · ${escapeHtml(r.manager||"미입력")}${r.memo?` · ${escapeHtml(r.memo)}`:""}</div></div><div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div></article>`).join("");
+  $("peopleList").innerHTML=visibleRows.map(r=>{const canManage=currentProfile?.role==="admin"||String(r.created_by)===String(currentUser?.id);return `<article class="person-row"><div class="person-main"><div class="person-title"><strong>${escapeHtml(r.name)}</strong><span class="person-tag ${r.event_type==="퇴사"?"exit":"hire"}">${escapeHtml(r.event_type)}</span><span class="person-tag shift">${escapeHtml(r.shift_type)}</span><span class="person-status status-${r.status==="완료"?"done":r.status==="취소"?"cancel":"active"}">${escapeHtml(r.status)}</span></div><div class="person-meta">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")} · 연락처 ${escapeHtml(r.phone||"미입력")}</div><div class="person-meta">담당자 · ${escapeHtml(r.manager||"미입력")}${r.memo?` · ${escapeHtml(r.memo)}`:""}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div>`:""}</article>`}).join("");
   $("peoplePagination").innerHTML=renderPager(peoplePage,pages,rows.length,'people');
 }
 function openPersonModal(record=null){
-  if(currentProfile?.role!=="admin"){alert("관리자만 이용할 수 있습니다.");return}
+  if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved")){alert("승인된 회원만 이용할 수 있습니다.");return}
+  if(record && currentProfile.role!=="admin" && String(record.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 수정할 수 있습니다.");return}
   $("personForm").reset();$("personId").value=record?.id||"";
   $("personType").value=record?.event_type||"신규입차자";$("personName").value=record?.name||"";$("personShift").value=record?.shift_type||"주간";
   $("personDate").value=record?.event_date||dateString(selectedDate);
@@ -174,12 +177,12 @@ function openPersonModal(record=null){
 function updatePersonDateLabel(){$("personDateLabel").firstChild.textContent=$("personType").value==="퇴사"?"퇴사일":"신규입차일"}
 function toggleCustomRegion(){const custom=$("personRegion").value===CUSTOM_REGION_VALUE;$("personRegionCustom").classList.toggle("hidden",!custom);$("personRegionCustom").required=custom;if(!custom)$("personRegionCustom").value="";}
 function editPerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(r)openPersonModal(r)}
-async function savePerson(e){e.preventDefault();if(currentProfile?.role!=="admin")return;
- const id=$("personId").value;const payload={event_type:$("personType").value,name:$("personName").value.trim(),shift_type:$("personShift").value,event_date:$("personDate").value,region:$("personRegion").value===CUSTOM_REGION_VALUE?$("personRegionCustom").value.trim():$("personRegion").value,router_code:$("personRouter").value.trim()||null,phone:$("personPhone").value.trim()||null,status:$("personStatus").value,memo:$("personMemo").value.trim()||null,manager:$("personManager").value.trim()};
+async function savePerson(e){e.preventDefault();if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved"))return;
+ const id=$("personId").value;const existing=id?peopleRecords.find(x=>String(x.id)===String(id)):null;if(id&&!existing){alert("수정할 정보를 찾을 수 없습니다.");return}if(existing&&currentProfile.role!=="admin"&&String(existing.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 수정할 수 있습니다.");return}const payload={event_type:$("personType").value,name:$("personName").value.trim(),shift_type:$("personShift").value,event_date:$("personDate").value,region:$("personRegion").value===CUSTOM_REGION_VALUE?$("personRegionCustom").value.trim():$("personRegion").value,router_code:$("personRouter").value.trim()||null,phone:$("personPhone").value.trim()||null,status:$("personStatus").value,memo:$("personMemo").value.trim()||null,manager:$("personManager").value.trim()};
  if(id){const {error}=await db.from("personnel_events").update(payload).eq("id",id);if(error){alert("수정 실패: "+error.message);return}}else{payload.created_by=currentUser.id;const {error}=await db.from("personnel_events").insert(payload);if(error){alert("등록 실패: "+error.message);return}}
  $("personModal").classList.add("hidden");await loadPeople();
 }
-async function deletePerson(id){if(currentProfile?.role!=="admin"||!confirm("이 정보를 삭제할까요?"))return;const {error}=await db.from("personnel_events").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await loadPeople()}
+async function deletePerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(!r)return;if(currentProfile?.role!=="admin"&&String(r.created_by)!==String(currentUser?.id)){alert("본인이 등록한 정보만 삭제할 수 있습니다.");return}if(!confirm("이 정보를 삭제할까요?"))return;const {error}=await db.from("personnel_events").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await loadPeople()}
 
 async function loadSchedules(){
   const {data,error}=await db.from("schedules").select(`*, schedule_images(id,file_name,file_path,created_at)`).order("schedule_date",{ascending:true}).order("start_time",{ascending:true,nullsFirst:true});
@@ -344,7 +347,8 @@ async function startApp(){
   $("authScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");
   $("memberAdminCard").classList.toggle("hidden",currentProfile.role!=="admin");
   await loadSchedules();
-  if(currentProfile.role==="admin"){await loadMembers(); await loadPeople();}
+  if(currentProfile.role==="admin"){await loadMembers();}
+  if(currentProfile.role==="admin" || currentProfile.approval_status==="approved"){await loadPeople();}
 }
 
 $("loginForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();try{await signIn($("loginUsername").value,$("loginPassword").value);await startApp()}catch(err){showAuthMessage("로그인 실패: "+err.message,"error")}};
@@ -382,7 +386,7 @@ function setWorkspaceView(view){
     $("memberAdminCard").classList.remove("hidden");$("peopleAdminCard").classList.add("hidden");
     loadMembers();
   } else if(view==="people"){
-    if(currentProfile?.role!=="admin"){alert("관리자만 이용할 수 있습니다.");setWorkspaceView("calendar");return}
+    if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved")){alert("승인된 회원만 이용할 수 있습니다.");setWorkspaceView("calendar");return}
     $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.remove("hidden");loadPeople();
   } else {
     $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.add("hidden");
