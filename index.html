@@ -39,6 +39,7 @@
       <button class="nav-item" type="button" id="sidebarAddBtn"><span>＋</span>일정 등록</button>
       <button class="nav-item" type="button" id="sidebarTodayBtn"><span>▤</span>내 일정</button>
       <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button>
+      <button class="nav-item admin-nav hidden" type="button" id="sidebarPeopleBtn"><span>♧</span>신규입차자 / 퇴사</button>
     </nav>
     <div class="sidebar-bottom"><button class="nav-item" type="button" id="sidebarLogoutBtn"><span>↪</span>로그아웃</button></div>
   </aside>
@@ -82,6 +83,27 @@
           <div id="scheduleList" class="schedule-list"></div>
         </section>
 
+        <section id="peopleAdminCard" class="schedule-card hidden">
+          <div class="section-head"><div><h2>신규입차자 / 퇴사 관리</h2><p>입차·퇴사 현황을 등록하고 달력에 표시합니다.</p></div><button id="addPersonBtn" class="primary-btn" type="button">＋ 등록</button></div>
+          <div class="people-stats">
+            <div class="people-stat"><span>신규입차 예정</span><strong id="statHirePending">0명</strong></div>
+            <div class="people-stat"><span>입차 완료</span><strong id="statHireDone">0명</strong></div>
+            <div class="people-stat"><span>퇴사 예정</span><strong id="statExitPending">0명</strong></div>
+            <div class="people-stat"><span>퇴사 완료</span><strong id="statExitDone">0명</strong></div>
+          </div>
+          <div class="people-filters-panel">
+            <div class="people-filters-top">
+              <label class="people-search-label"><span class="filter-heading"><span class="filter-icon search-icon">⌕</span><span><strong>검색</strong><small>이름, 라우터 코드, 연락처, 담당자 검색</small></span></span><input id="peopleSearch" type="search" placeholder="이름, 라우터 코드, 연락처, 담당자명을 입력하세요..."></label>
+              <label class="people-filter-label"><span class="filter-heading"><span class="filter-icon type-icon">♙</span><span><strong>유형</strong><small>신규입차자 / 퇴사</small></span></span><select id="peopleTypeFilter"><option value="all">전체</option><option value="신규입차자">신규입차자</option><option value="퇴사">퇴사</option></select></label>
+              <label class="people-filter-label"><span class="filter-heading"><span class="filter-icon region-icon">⌖</span><span><strong>지역</strong><small>지역별로 필터링하세요</small></span></span><select id="peopleRegionFilter"><option value="all">전체 지역</option></select></label>
+            </div>
+            <div class="people-filters-bottom">
+              <label class="people-filter-label shift-filter-label"><span class="filter-heading"><span class="filter-icon shift-icon">◷</span><span><strong>근무 구분</strong><small>주간 / 야간</small></span></span><select id="peopleShiftFilter"><option value="all">주간/야간 전체</option><option value="주간">주간</option><option value="야간">야간</option></select></label>
+              <div class="people-filter-actions"><button type="button" id="resetPeopleFilters" class="filter-reset-btn">↻ 초기화</button><button type="button" id="applyPeopleFilters" class="filter-search-btn">⌕ 검색</button></div>
+            </div>
+          </div>
+          <div id="peopleList" class="people-list"></div>
+        </section>
         <section id="memberAdminCard" class="schedule-card hidden">
           <div class="section-head"><div><h2>회원 관리</h2><p id="memberCount">가입 회원</p></div><button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button></div>
           <div id="memberList" class="member-list"></div>
@@ -115,6 +137,23 @@
   </div>
 </div>
 
+<div id="personModal" class="modal hidden">
+  <div class="modal-backdrop" data-close-person></div>
+  <div class="modal-box">
+    <div class="modal-head"><div><span class="modal-kicker">PERSONNEL</span><h2 id="personModalTitle">신규입차자 등록</h2></div><button id="closePersonModal" class="icon-btn" type="button">×</button></div>
+    <form id="personForm">
+      <input type="hidden" id="personId">
+      <label>유형<select id="personType" required><option value="신규입차자">신규입차자</option><option value="퇴사">퇴사</option></select></label>
+      <div class="two-col"><label>이름<input id="personName" maxlength="100" required></label><label>구분<select id="personShift" required><option value="주간">주간</option><option value="야간">야간</option></select></label></div>
+      <div class="two-col"><label id="personDateLabel">신규입차일<input type="date" id="personDate" required></label><label>지역<select id="personRegion" required><option value="" disabled selected>지역 선택</option></select><input id="personRegionCustom" class="region-custom-input hidden" type="text" maxlength="80" placeholder="지역을 직접 입력하세요"></label></div>
+      <div class="two-col"><label>라우터 코드<input id="personRouter" maxlength="100" placeholder="예: 401ABCD"></label><label>연락처<input id="personPhone" maxlength="50" type="tel"></label></div>
+      <div class="two-col"><label>진행 상태<select id="personStatus" required><option>예정</option><option>진행중</option><option>완료</option><option>취소</option></select></label><label>담당자<input id="personManager" maxlength="100" required></label></div>
+      <label>메모<textarea id="personMemo" rows="3"></textarea></label>
+      <div class="form-actions"><button type="button" id="cancelPersonBtn" class="secondary-btn">취소</button><button type="submit" class="primary-btn">저장</button></div>
+    </form>
+  </div>
+</div>
+
 <div id="modal" class="modal hidden">
   <div class="modal-backdrop"></div>
   <div class="modal-box">
@@ -128,8 +167,6 @@
           <button type="button" class="category-option cpf active" data-category="CPF 지원" role="radio" aria-checked="true">CPF 지원</button>
           <button type="button" class="category-option accident" data-category="차량사고" role="radio" aria-checked="false">차량사고</button>
           <button type="button" class="category-option issue" data-category="이슈" role="radio" aria-checked="false">이슈</button>
-          <button type="button" class="category-option new-hire" data-category="신규입차자(신입)" role="radio" aria-checked="false">신규입차자(신입)</button>
-          <button type="button" class="category-option resignation" data-category="퇴사" role="radio" aria-checked="false">퇴사</button>
         </div></div>
         <label>시작 시간<input type="time" id="startTime"></label>
       </div>
