@@ -84,7 +84,7 @@
         </section>
 
         <section id="peopleAdminCard" class="schedule-card hidden">
-          <div class="section-head"><div><h2>신규입차자 / 퇴사 관리</h2><p>입차·퇴사 현황을 등록하고 달력에 표시합니다.</p></div><button id="addPersonBtn" class="primary-btn" type="button">＋ 등록</button></div>
+          <div class="section-head"><div><h2>신규입차자 / 퇴사 관리</h2><p>입차·퇴사 현황을 등록하고 달력에 표시합니다.</p></div><div class="toolbar-actions"><button id="exportPeopleBtn" class="secondary-btn" type="button">엑셀용 CSV 내보내기</button><button id="addPersonBtn" class="primary-btn" type="button">＋ 등록</button></div></div>
           <div class="people-stats">
             <div class="people-stat"><span>신규입차 예정</span><strong id="statHirePending">0명</strong></div>
             <div class="people-stat"><span>입차 완료</span><strong id="statHireDone">0명</strong></div>
@@ -106,7 +106,7 @@
           <div id="peoplePagination" class="pagination"></div>
         </section>
         <section id="memberAdminCard" class="schedule-card hidden">
-          <div class="section-head"><div><h2>회원 관리</h2><p id="memberCount">가입 회원</p></div><button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button></div>
+          <div class="section-head"><div><h2>회원 관리</h2><p id="memberCount">가입 회원</p></div><div class="toolbar-actions"><button id="exportMembersBtn" class="secondary-btn" type="button">회원 CSV 내보내기</button><button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button></div></div>
           <div id="memberList" class="member-list"></div>
           <div id="memberPagination" class="pagination"></div>
         </section>
