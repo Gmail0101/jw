@@ -19,6 +19,9 @@ let editingId = null;
 let lightboxImages = [];
 let lightboxIndex = 0;
 let lightboxTouchStartX = null;
+let peopleRecords = [];
+const PEOPLE_REGIONS = ["대전", "서울", "경기"];
+const CUSTOM_REGION_VALUE = "__custom__";
 
 const $ = id => document.getElementById(id);
 
@@ -107,6 +110,49 @@ async function setMemberApproval(id,status){
 }
 
 
+function fillRegionSelect(select, includeAll=false){
+  if(!select)return; const old=select.value;
+  select.innerHTML=(includeAll?'<option value="all">전체 지역</option>':'<option value="" disabled>지역 선택</option>')+PEOPLE_REGIONS.map(r=>`<option value="${escapeHtml(r)}">${escapeHtml(r)}</option>`).join("")+(includeAll?'':'<option value="'+CUSTOM_REGION_VALUE+'">직접입력</option>');
+  if([...select.options].some(o=>o.value===old))select.value=old;
+}
+async function loadPeople(){
+  if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved"))return;
+  const {data,error}=await db.from("personnel_events").select("*").order("event_date",{ascending:true});
+  if(error){console.error(error);alert("신규입차자/퇴사 정보를 불러오지 못했습니다. personnel_events 테이블 SQL을 실행했는지 확인해주세요.\n"+error.message);return}
+  peopleRecords=data||[]; renderPeople(); updateSummary(); renderCalendar(); renderScheduleList();
+}
+function renderPeople(){
+  const active=peopleRecords.filter(x=>x.status!=="취소");
+  $("statHirePending").textContent=active.filter(x=>x.event_type==="신규입차자"&&x.status!=="완료").length+"명";
+  $("statHireDone").textContent=active.filter(x=>x.event_type==="신규입차자"&&x.status==="완료").length+"명";
+  $("statExitPending").textContent=active.filter(x=>x.event_type==="퇴사"&&x.status!=="완료").length+"명";
+  $("statExitDone").textContent=active.filter(x=>x.event_type==="퇴사"&&x.status==="완료").length+"명";
+  const type=$("peopleTypeFilter").value,region=$("peopleRegionFilter").value,shift=$("peopleShiftFilter").value;
+  const q=($("peopleSearch")?.value||"").trim().toLocaleLowerCase();
+  const rows=peopleRecords.filter(r=>(type==="all"||r.event_type===type)&&(region==="all"||r.region===region)&&(shift==="all"||r.shift_type===shift)&&
+    (!q||[r.name,r.event_type,r.shift_type,r.event_date,r.region,r.router_code,r.phone,r.status,r.memo,r.manager].some(v=>String(v||"").toLocaleLowerCase().includes(q))));
+  if(!rows.length){$("peopleList").innerHTML='<div class="empty">등록된 신규입차자/퇴사 정보가 없습니다.</div>';return}
+  $("peopleList").innerHTML=rows.map(r=>`<article class="person-row"><div class="person-main"><div class="person-title"><strong>${escapeHtml(r.name)}</strong><span class="person-tag ${r.event_type==="퇴사"?"exit":"hire"}">${escapeHtml(r.event_type)}</span><span class="person-tag shift">${escapeHtml(r.shift_type)}</span><span class="person-status status-${r.status==="완료"?"done":r.status==="취소"?"cancel":"active"}">${escapeHtml(r.status)}</span></div><div class="person-meta">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")} · 연락처 ${escapeHtml(r.phone||"미입력")}</div><div class="person-meta">담당자 · ${escapeHtml(r.manager||"미입력")}${r.memo?` · ${escapeHtml(r.memo)}`:""}</div></div><div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div></article>`).join("");
+}
+function openPersonModal(record=null){
+  if(currentProfile?.role!=="admin"){alert("관리자만 이용할 수 있습니다.");return}
+  $("personForm").reset();$("personId").value=record?.id||"";
+  $("personType").value=record?.event_type||"신규입차자";$("personName").value=record?.name||"";$("personShift").value=record?.shift_type||"주간";
+  $("personDate").value=record?.event_date||dateString(selectedDate);
+  const knownRegion=PEOPLE_REGIONS.includes(record?.region);$("personRegion").value=record?(knownRegion?record.region:CUSTOM_REGION_VALUE):"";$("personRegionCustom").value=record&&!knownRegion?(record.region||""):"";toggleCustomRegion();
+  $("personRouter").value=record?.router_code||"";$("personPhone").value=record?.phone||"";$("personStatus").value=record?.status||"예정";$("personManager").value=record?.manager||currentProfile?.display_name||currentProfile?.username||"";$("personMemo").value=record?.memo||"";
+  $("personModalTitle").textContent=record?"입차자 / 퇴사 정보 수정":"신규입차자 / 퇴사 등록";updatePersonDateLabel();$("personModal").classList.remove("hidden");
+}
+function updatePersonDateLabel(){$("personDateLabel").firstChild.textContent=$("personType").value==="퇴사"?"퇴사일":"신규입차일"}
+function toggleCustomRegion(){const custom=$("personRegion").value===CUSTOM_REGION_VALUE;$("personRegionCustom").classList.toggle("hidden",!custom);$("personRegionCustom").required=custom;if(!custom)$("personRegionCustom").value="";}
+function editPerson(id){const r=peopleRecords.find(x=>String(x.id)===String(id));if(r)openPersonModal(r)}
+async function savePerson(e){e.preventDefault();if(currentProfile?.role!=="admin")return;
+ const id=$("personId").value;const payload={event_type:$("personType").value,name:$("personName").value.trim(),shift_type:$("personShift").value,event_date:$("personDate").value,region:$("personRegion").value===CUSTOM_REGION_VALUE?$("personRegionCustom").value.trim():$("personRegion").value,router_code:$("personRouter").value.trim()||null,phone:$("personPhone").value.trim()||null,status:$("personStatus").value,memo:$("personMemo").value.trim()||null,manager:$("personManager").value.trim()};
+ if(id){const {error}=await db.from("personnel_events").update(payload).eq("id",id);if(error){alert("수정 실패: "+error.message);return}}else{payload.created_by=currentUser.id;const {error}=await db.from("personnel_events").insert(payload);if(error){alert("등록 실패: "+error.message);return}}
+ $("personModal").classList.add("hidden");await loadPeople();
+}
+async function deletePerson(id){if(currentProfile?.role!=="admin"||!confirm("이 정보를 삭제할까요?"))return;const {error}=await db.from("personnel_events").delete().eq("id",id);if(error){alert("삭제 실패: "+error.message);return}await loadPeople()}
+
 async function loadSchedules(){
   const {data,error}=await db.from("schedules").select(`*, schedule_images(id,file_name,file_path,created_at)`).order("schedule_date",{ascending:true}).order("start_time",{ascending:true,nullsFirst:true});
   if(error){console.error(error);alert("일정을 불러오지 못했습니다.\n"+error.message);return}
@@ -117,13 +163,17 @@ async function loadSchedules(){
 
 
 function updateSummary(){
-  const counts={"CPF 지원":0,"차량사고":0,"이슈":0,"신규입차자(신입)":0,"퇴사":0};
+  const counts={"CPF 지원":0,"차량사고":0,"이슈":0};
   allSchedules.forEach(s=>{if(counts[s.category]!==undefined) counts[s.category]++;});
+  // 신규입차/퇴사는 일반 일정 카테고리가 아니라 personnel_events 등록 건수로 집계
+  const activePeople=peopleRecords.filter(r=>r.status!=="취소");
+  const hireCount=activePeople.filter(r=>r.event_type==="신규입차자").length;
+  const exitCount=activePeople.filter(r=>r.event_type==="퇴사").length;
   if($("cpfCount")) $("cpfCount").textContent=`${counts["CPF 지원"]}건`;
   if($("accidentCount")) $("accidentCount").textContent=`${counts["차량사고"]}건`;
   if($("issueCount")) $("issueCount").textContent=`${counts["이슈"]}건`;
-  if($("newHireCount")) $("newHireCount").textContent=`${counts["신규입차자(신입)"]}건`;
-  if($("resignationCount")) $("resignationCount").textContent=`${counts["퇴사"]}건`;
+  if($("newHireCount")) $("newHireCount").textContent=`${hireCount}건`;
+  if($("resignationCount")) $("resignationCount").textContent=`${exitCount}건`;
 }
 
 function renderCalendar(){
@@ -136,7 +186,9 @@ function renderCalendar(){
     if(d.getMonth()!==m)day.classList.add("other");if(v===today)day.classList.add("today");if(v===selected)day.classList.add("selected");
     day.innerHTML=`<span class="day-number">${d.getDate()}</span><div class="day-events"></div>`;
     const ev=day.querySelector(".day-events");
-    allSchedules.filter(s=>s.schedule_date===v).slice(0,3).forEach(s=>{const e=document.createElement("div");e.className=`day-event ${categoryClass(s.category)}`;const t=s.start_time?s.start_time.slice(0,5)+" ":"";e.textContent=t+s.title;ev.appendChild(e)});
+    const scheduleEvents=allSchedules.filter(s=>s.schedule_date===v).slice(0,3);
+    scheduleEvents.forEach(s=>{const e=document.createElement("div");e.className=`day-event ${categoryClass(s.category)}`;const t=s.start_time?s.start_time.slice(0,5)+" ":"";e.textContent=t+s.title;ev.appendChild(e)});
+    peopleRecords.filter(r=>r.event_date===v && r.status!=="취소").slice(0,3).forEach(r=>{const e=document.createElement("div");e.className=`day-event ${r.event_type==="퇴사"?"resignation":"new-hire"}`;e.textContent=`${r.event_type==="퇴사"?"퇴사":"입차"} · ${r.name} (${r.shift_type})`;ev.appendChild(e)});
     day.onclick=()=>{selectedDate=new Date(`${v}T12:00:00`);currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);activeCategory="all";document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));document.querySelector('[data-category="all"]').classList.add("active");renderCalendar();renderScheduleList()};
     cal.appendChild(day);
   }
@@ -148,16 +200,28 @@ function renderScheduleList(){
   const selected=dateString(selectedDate);
   let schedules=allSchedules.filter(s=>s.schedule_date===selected);
   if(activeCategory!=="all")schedules=schedules.filter(s=>s.category===activeCategory);
+  let personnel=peopleRecords.filter(r=>r.event_date===selected && r.status!=="취소");
+  if(activeCategory==="신규입차자(신입)")personnel=personnel.filter(r=>r.event_type==="신규입차자");
+  else if(activeCategory==="퇴사")personnel=personnel.filter(r=>r.event_type==="퇴사");
+  else if(activeCategory!=="all")personnel=[];
   $("selectedDateTitle").textContent=`${formatDateKR(selected)} 일정`;
-  $("scheduleCount").textContent=`등록된 일정 ${schedules.length}개`;
-  if(!schedules.length){$("scheduleList").innerHTML=`<div class="empty">이 날짜에는 등록된 일정이 없습니다.</div>`;return}
-  $("scheduleList").innerHTML=schedules.map(s=>{
+  $("scheduleCount").textContent=`등록된 일정 ${schedules.length+personnel.length}개 (일반 ${schedules.length} · 입차/퇴사 ${personnel.length})`;
+  if(!schedules.length&&!personnel.length){$("scheduleList").innerHTML=`<div class="empty">이 날짜에는 등록된 일정이 없습니다.</div>`;return}
+  const scheduleHtml=schedules.map(s=>{
     const time=s.start_time?`${s.start_time.slice(0,5)}${s.end_time?" ~ "+s.end_time.slice(0,5):""}`:"시간 미지정";
     const author=s.author_username ? (s.author_display_name ? `${s.author_username} (${s.author_display_name})` : s.author_username) : "작성자 정보 없음";
     const imgs=(s.schedule_images||[]).map(i=>{const {data}=db.storage.from(BUCKET).getPublicUrl(i.file_path);return `<div class="image-card"><img src="${data.publicUrl}" alt="${escapeHtml(i.file_name)}"><a href="${data.publicUrl}?download=${encodeURIComponent(i.file_name)}" download>다운로드</a></div>`}).join("");
     const canManage=currentProfile?.role==="admin" || s.user_id===currentUser.id;
     return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div><div class="schedule-author">작성자 · ${escapeHtml(author)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}</article>`;
   }).join("");
+  const personnelHtml=personnel.map(r=>`<article class="schedule-item personnel-schedule-item ${r.event_type==="퇴사"?"resignation-item":"new-hire-item"}">
+    <div class="schedule-row"><div><h3 class="schedule-title">${r.event_type==="퇴사"?"퇴사":"신규입차"} · ${escapeHtml(r.name)}</h3>
+    <div class="schedule-meta"><span class="badge">${escapeHtml(r.event_type)}</span><span class="badge">${escapeHtml(r.shift_type)}</span><span class="badge">${escapeHtml(r.status)}</span></div>
+    <div class="schedule-author">${escapeHtml(r.event_date)} · ${escapeHtml(r.region)} · 라우터 ${escapeHtml(r.router_code||"미입력")}</div>
+    <div class="schedule-author">연락처 ${escapeHtml(r.phone||"미입력")} · 담당자 ${escapeHtml(r.manager||"미입력")}</div></div>
+    ${currentProfile?.role==="admin"?`<div class="schedule-actions"><button class="small-btn" onclick="editPerson('${r.id}')">수정</button><button class="small-btn" onclick="deletePerson('${r.id}')">삭제</button></div>`:""}
+    </div>${r.memo?`<div class="schedule-description">${escapeHtml(r.memo)}</div>`:""}</article>`).join("");
+  $("scheduleList").innerHTML=scheduleHtml+personnelHtml;
 }
 
 function openImageLightbox(src, caption="", images=null, startIndex=0){
@@ -252,13 +316,19 @@ async function startApp(){
   $("authScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");
   $("memberAdminCard").classList.toggle("hidden",currentProfile.role!=="admin");
   await loadSchedules();
-  if(currentProfile.role==="admin")await loadMembers();
+  if(currentProfile.role==="admin"){await loadMembers(); await loadPeople();}
 }
 
 $("loginForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();try{await signIn($("loginUsername").value,$("loginPassword").value);await startApp()}catch(err){showAuthMessage("로그인 실패: "+err.message,"error")}};
 $("signupForm").onsubmit=async e=>{e.preventDefault();clearAuthMessage();const username=normalizeUsername($("signupUsername").value);const name=$("signupName").value.trim();const password=$("signupPassword").value;const confirm=$("signupPasswordConfirm").value;if(password!==confirm){showAuthMessage("비밀번호가 일치하지 않습니다.","error");return}if(!/^[a-z0-9._-]{3,30}$/.test(username)){showAuthMessage("아이디는 영문 소문자, 숫자, ., _, -만 사용해 3~30자로 입력해주세요.","error");return}if(!name){showAuthMessage("이름을 입력해주세요.","error");return}try{await signUp(username,name,password);showAuthMessage("회원가입이 완료되었습니다. 관리자 승인 후 로그인할 수 있습니다.","success");$("signupForm").reset();$("loginUsername").value=username}catch(err){showAuthMessage("회원가입 실패: "+(err.message||err),"error")}};
 if($("logoutBtn")) $("logoutBtn").onclick=signOut;
 $("refreshMembersBtn").onclick=loadMembers;
+fillRegionSelect($("personRegion"));fillRegionSelect($("peopleRegionFilter"),true);
+$("addPersonBtn").onclick=()=>openPersonModal();$("closePersonModal").onclick=()=>$("personModal").classList.add("hidden");$("cancelPersonBtn").onclick=()=>$("personModal").classList.add("hidden");
+$("personModal").querySelectorAll("[data-close-person]").forEach(el=>el.onclick=()=>$("personModal").classList.add("hidden"));$("personForm").onsubmit=savePerson;$("personType").onchange=updatePersonDateLabel;$("personRegion").onchange=toggleCustomRegion;
+["peopleTypeFilter","peopleRegionFilter","peopleShiftFilter"].forEach(id=>$(id).onchange=renderPeople);if($("peopleSearch"))$("peopleSearch").oninput=renderPeople;
+$("resetPeopleFilters").onclick=()=>{$("peopleSearch").value="";$("peopleTypeFilter").value="all";$("peopleRegionFilter").value="all";$("peopleShiftFilter").value="all";renderPeople()};
+$("applyPeopleFilters").onclick=renderPeople;
 db.auth.onAuthStateChange((_event,session)=>{if(session){currentUser=session.user;startApp()}else{currentUser=null;currentProfile=null;$("authScreen").classList.remove("hidden");$("appScreen").classList.add("hidden")}});
 
 $("prevMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1);renderCalendar()};
@@ -271,8 +341,9 @@ $("sideTodayBtn").onclick=()=>{$("todayBtn").click()};
 function setWorkspaceView(view){
   const app=$("appScreen");
   app.classList.toggle("member-view",view==="members");
+  app.classList.toggle("people-view",view==="people");
   document.querySelectorAll(".nav-menu .nav-item").forEach(btn=>btn.classList.remove("active"));
-  const active=view==="members"?$("sidebarMemberBtn"):$("sidebarCalendarBtn");
+  const active=view==="members"?$("sidebarMemberBtn"):view==="people"?$("sidebarPeopleBtn") :$("sidebarCalendarBtn");
   if(active)active.classList.add("active");
   if(view==="members"){
     if(currentProfile?.role!=="admin"){
@@ -280,13 +351,17 @@ function setWorkspaceView(view){
       setWorkspaceView("calendar");
       return;
     }
-    $("memberAdminCard").classList.remove("hidden");
+    $("memberAdminCard").classList.remove("hidden");$("peopleAdminCard").classList.add("hidden");
     loadMembers();
+  } else if(view==="people"){
+    if(currentProfile?.role!=="admin"){alert("관리자만 이용할 수 있습니다.");setWorkspaceView("calendar");return}
+    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.remove("hidden");loadPeople();
   } else {
-    $("memberAdminCard").classList.add("hidden");
+    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.add("hidden");
   }
 }
 $("sidebarMemberBtn").onclick=()=>setWorkspaceView("members");
+$("sidebarPeopleBtn").onclick=()=>setWorkspaceView("people");
 $("sidebarCalendarBtn").onclick=()=>setWorkspaceView("calendar");
 $("sidebarLogoutBtn").onclick=signOut;$("closeModal").onclick=closeModal;$("cancelBtn").onclick=closeModal;
 $("modal").querySelector(".modal-backdrop").onclick=closeModal;$("scheduleForm").onsubmit=saveSchedule;
