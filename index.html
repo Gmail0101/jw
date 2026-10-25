@@ -38,7 +38,7 @@
       <button class="nav-item active" type="button" id="sidebarCalendarBtn"><span>▦</span>달력</button>
       <button class="nav-item" type="button" id="sidebarAddBtn"><span>＋</span>일정 등록</button>
       <button class="nav-item" type="button" id="sidebarTodayBtn"><span>▤</span>내 일정</button>
-      <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button>
+      <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button><button class="nav-item admin-nav hidden" type="button" id="sidebarAuditBtn"><span>▤</span>변경 이력</button>
       <button class="nav-item" type="button" id="sidebarPeopleBtn"><span>♧</span>신규입차자 / 퇴사</button>
     </nav>
     <div class="sidebar-bottom"><button class="nav-item" type="button" id="sidebarLogoutBtn"><span>↪</span>로그아웃</button></div>
@@ -51,7 +51,7 @@
         <h1>오늘도 편하게 일정을 관리하세요.</h1>
       </div>
       <div class="top-actions">
-        <span class="notification">♧<i></i></span>
+        <button class="notification" id="notificationBtn" type="button" aria-label="최근 알림">♧<i></i></button>
         <div class="user-chip"><span class="avatar" id="avatarInitial">U</span><span id="userInfo">로그인 사용자</span><span class="chevron">⌄</span></div>
         <span id="roleBadge" class="role-badge"></span>
       </div>
@@ -59,7 +59,7 @@
 
     <main class="dashboard">
       <section class="main-column">
-        <div class="calendar-toolbar">
+        <section class="overview-stats"><article class="overview-stat"><span>오늘 일정</span><strong id="overviewToday">0건</strong></article><article class="overview-stat"><span>향후 7일 일정</span><strong id="overviewWeek">0건</strong></article><article class="overview-stat"><span>이미지 첨부 일정</span><strong id="overviewImages">0건</strong></article><article class="overview-stat"><span>선택 날짜</span><strong id="overviewSelected">0건</strong></article></section><div class="calendar-toolbar">
           <div class="month-nav">
             <button id="prevMonth" class="circle-btn" aria-label="이전 달">‹</button>
             <h2 id="monthTitle"></h2>
@@ -67,7 +67,7 @@
           </div>
           <div class="toolbar-actions">
             <div class="view-switch"><button class="active" type="button">월간</button><button type="button">주간</button><button type="button">일간</button></div>
-            <button id="todayBtn" class="ghost-btn" type="button">오늘</button>
+            <button id="exportSchedulesBtn" class="secondary-btn" type="button">일정 CSV</button><button id="todayBtn" class="ghost-btn" type="button">오늘</button>
             <button id="addScheduleBtn" class="primary-btn" type="button">＋ 일정 등록</button>
           </div>
         </div>
@@ -105,7 +105,7 @@
           <div id="peopleList" class="people-list"></div>
           <div id="peoplePagination" class="pagination"></div>
         </section>
-        <section id="memberAdminCard" class="schedule-card hidden">
+        <section id="auditAdminCard" class="schedule-card hidden"><div class="section-head"><div><h2>변경 이력</h2><p>일정·회원 승인·입차/퇴사 정보 변경 기록</p></div><button id="refreshAuditBtn" class="secondary-btn" type="button">새로고침</button></div><div id="auditList" class="audit-list"></div></section><section id="memberAdminCard" class="schedule-card hidden">
           <div class="section-head"><div><h2>회원 관리</h2><p id="memberCount">가입 회원</p></div><div class="toolbar-actions"><button id="exportMembersBtn" class="secondary-btn" type="button">회원 CSV 내보내기</button><button id="refreshMembersBtn" class="secondary-btn" type="button">새로고침</button></div></div>
           <div id="memberList" class="member-list"></div>
           <div id="memberPagination" class="pagination"></div>
@@ -138,6 +138,7 @@
     </main>
   </div>
 </div>
+<div id="notificationPanel" class="notification-panel hidden" role="dialog" aria-label="최근 일정 알림"><div class="notification-panel-head"><strong>최근 일정</strong><button type="button" id="closeNotifications" class="icon-btn">×</button></div><div id="notificationList"></div></div>
 
 <div id="personModal" class="modal hidden">
   <div class="modal-backdrop" data-close-person></div>
