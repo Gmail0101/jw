@@ -43,6 +43,39 @@ function downloadCSV(filename, rows) {
 }
 function exportPeopleCSV(){downloadCSV(`입차퇴사_현황_${dateString(new Date())}.csv`,peopleRecords.map(r=>({유형:r.event_type,이름:r.name,근무구분:r.shift_type,일자:r.event_date,지역:r.region,라우터코드:r.router_code,연락처:r.phone,상태:r.status,담당자:r.manager,메모:r.memo,등록자:r.created_by,등록ID:r.id})));}
 function exportMembersCSV(){if(currentProfile?.role!=="admin"){alert("관리자만 내보낼 수 있습니다.");return}downloadCSV(`회원목록_${dateString(new Date())}.csv`,memberRecords.map(r=>({아이디:r.username,이름:r.display_name,권한:r.role,승인상태:r.approval_status,가입일:r.created_at,회원ID:r.id})));}
+function exportSchedulesCSV(){downloadCSV(`일정목록_${dateString(new Date())}.csv`,allSchedules.map(s=>({날짜:s.schedule_date,시작시간:s.start_time,종료시간:s.end_time,카테고리:s.category,제목:s.title,내용:s.description,작성자:s.author_username,작성자이름:s.author_display_name,첨부이미지수:(s.schedule_images||[]).length,등록일:s.created_at,일정ID:s.id})));}
+function updateOverview(){const today=dateString(new Date()),weekEnd=new Date();weekEnd.setDate(weekEnd.getDate()+7);const end=dateString(weekEnd),selected=dateString(selectedDate);const countPeople=(a,b)=>peopleRecords.filter(r=>r.event_date>=a&&r.event_date<=b&&r.status!=="취소").length;const put=(id,v)=>{if($(id))$(id).textContent=v+"건"};put("overviewToday",allSchedules.filter(s=>s.schedule_date===today).length+countPeople(today,today));put("overviewWeek",allSchedules.filter(s=>s.schedule_date>=today&&s.schedule_date<=end).length+countPeople(today,end));put("overviewImages",allSchedules.filter(s=>(s.schedule_images||[]).length>0).length);put("overviewSelected",allSchedules.filter(s=>s.schedule_date===selected).length+countPeople(selected,selected));}
+async function loadAuditLogs(){
+  if(currentProfile?.role!=="admin")return;
+  const list=$("auditList");
+  list.innerHTML='<div class="empty">변경 이력을 불러오는 중입니다.</div>';
+  const {data,error}=await db.from("audit_logs").select("id,actor_username,action,entity_type,entity_id,details,created_at").order("created_at",{ascending:false}).limit(100);
+  if(error){list.innerHTML='<div class="empty">이력을 불러오지 못했습니다. audit_logs_setup.sql을 Supabase SQL Editor에서 실행했는지 확인해주세요.</div>';console.warn(error);return}
+  if(!data?.length){list.innerHTML='<div class="empty">아직 기록된 변경 이력이 없습니다.</div>';return}
+  const actionLabels={create:"등록",update:"정보 수정",delete:"삭제",approval_approved:"회원 승인",approval_rejected:"회원 승인 거절"};
+  const typeLabels={personnel_event:"입차·퇴사 정보",schedule:"일정",schedules:"일정",profile:"회원 정보",profiles:"회원 정보",member:"회원",schedule_image:"일정 이미지",schedule_images:"일정 이미지"};
+  const keyLabels={name:"이름",region:"지역",status:"진행 상태",manager:"담당자",event_date:"처리 예정일",event_type:"구분",shift_type:"근무 형태",router_code:"라우터 코드",memo:"메모",title:"일정 제목",description:"내용",schedule_date:"일정 날짜",category:"카테고리",start_time:"시작 시간",end_time:"종료 시간",approval_status:"승인 상태",username:"아이디",display_name:"이름",phone:"연락처"};
+  const safeValue=(k,v)=>k.toLowerCase()==="phone"?"전화번호 변경":(v===null||v===undefined||v===""?"-":String(v));
+  list.innerHTML=data.map((r,i)=>{
+    const time=r.created_at?new Date(r.created_at).toLocaleString("ko-KR"):"시간 미상";
+    const details=r.details&&typeof r.details==="object"?r.details:{};
+    const entries=Object.entries(details).filter(([k])=>!['password','token','access_token','refresh_token'].includes(k.toLowerCase()));
+    const get=(...keys)=>{for(const k of keys){if(details[k]!==undefined&&details[k]!==null&&details[k]!=="")return String(details[k])}return ""};
+    const target=get("name","display_name","target_name","person_name")||((r.entity_type||"").includes("personnel")?"입차·퇴사 대상자":"");
+    let title=actionLabels[r.action]||"활동 기록";
+    const eventType=get("event_type");
+    if((r.entity_type||"").includes("personnel")) title=(eventType==="퇴사"?"퇴사 정보 ":eventType==="신규입차자"||eventType==="신규 입차"?"신규 입차 정보 ":"입차·퇴사 정보 ")+(r.action==="create"?"등록":r.action==="delete"?"삭제":"수정");
+    const actor=escapeHtml(r.actor_username||"알 수 없음");
+    const targetText=target?`<span class="audit-target">대상자 <b>${escapeHtml(target)}</b></span>`:"";
+    const chips=entries.filter(([k])=>['region','shift_type','status','event_type','category','approval_status'].includes(k)).slice(0,4).map(([k,v])=>`<span class="audit-chip">${escapeHtml(keyLabels[k]||k)} ${escapeHtml(safeValue(k,v))}</span>`).join("");
+    const detail=entries.map(([k,v])=>`<div class="audit-detail-item"><span>${escapeHtml(keyLabels[k]||k.replaceAll('_',' '))}</span><b>${escapeHtml(safeValue(k,v))}</b></div>`).join("");
+    const id=String(r.id??i).replace(/[^a-zA-Z0-9_-]/g,"");
+    return `<article class="audit-row audit-compact"><button type="button" class="audit-summary" aria-expanded="false" data-audit-toggle="${escapeHtml(id)}"><span class="audit-icon">${(r.entity_type||"").includes("personnel")?"♙":(r.entity_type||"").includes("schedule")?"▦":"↻"}</span><span class="audit-summary-main"><span class="audit-title-line"><strong>${escapeHtml(title)}</strong><time>${escapeHtml(time)}</time></span><span class="audit-meta">작업자 <b>${actor}</b>${targetText}</span>${chips?`<span class="audit-chips">${chips}</span>`:""}</span><span class="audit-expand">상세 <span>⌄</span></span></button><div class="audit-expanded hidden" id="audit-detail-${escapeHtml(id)}"><div class="audit-expanded-head">상세 내용</div>${detail||'<div class="audit-detail-item"><span>상세 정보</span><b>추가 정보 없음</b></div>'}</div></article>`;
+  }).join("");
+  list.querySelectorAll("[data-audit-toggle]").forEach(btn=>btn.addEventListener("click",()=>{const panel=$("audit-detail-"+btn.dataset.auditToggle);const open=btn.getAttribute("aria-expanded")==="true";btn.setAttribute("aria-expanded",String(!open));panel?.classList.toggle("hidden",open);btn.querySelector(".audit-expand").innerHTML=open?'상세 <span>⌄</span>':'접기 <span>⌃</span>'; }));
+}
+function openNotifications(){const panel=$("notificationPanel"),now=Date.now();const recent=allSchedules.filter(s=>s.created_at&&(now-new Date(s.created_at).getTime())<=7*86400000).sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)).slice(0,8);$("notificationList").innerHTML=recent.length?recent.map(s=>`<button type="button" class="notification-entry" data-schedule-date="${escapeHtml(s.schedule_date)}"><strong>${escapeHtml(s.title)}</strong><span>${escapeHtml(s.category)} · ${escapeHtml(s.schedule_date)}</span><small>작성자 ${escapeHtml(s.author_username||'미상')}</small></button>`).join(''):'<div class="empty">최근 7일 내 새 일정이 없습니다.</div>';panel.classList.toggle('hidden')}
+
 
 function dateString(d){return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`}
 function formatDateKR(v){const [y,m,d]=v.split("-");return `${y}년 ${Number(m)}월 ${Number(d)}일`}
@@ -162,7 +195,7 @@ async function loadPeople(){
   if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved"))return;
   const {data,error}=await db.from("personnel_events").select("*").order("event_date",{ascending:true});
   if(error){console.error(error);alert("신규입차자/퇴사 정보를 불러오지 못했습니다. personnel_events 테이블 SQL을 실행했는지 확인해주세요.\n"+error.message);return}
-  peopleRecords=data||[]; renderPeople(); updateSummary(); renderCalendar(); renderScheduleList();
+  peopleRecords=data||[]; renderPeople(); updateSummary(); renderCalendar(); renderScheduleList();updateOverview();
 }
 function renderPeople(){
   const active=peopleRecords.filter(x=>x.status!=="취소");
@@ -205,7 +238,7 @@ async function loadSchedules(){
   if(error){console.error(error);alert("일정을 불러오지 못했습니다.\n"+error.message);return}
   allSchedules=data||[];
   updateSummary();
-  renderCalendar();renderScheduleList();
+  renderCalendar();renderScheduleList();updateOverview();
 }
 
 
@@ -236,7 +269,7 @@ function renderCalendar(){
     const scheduleEvents=allSchedules.filter(s=>s.schedule_date===v).slice(0,3);
     scheduleEvents.forEach(s=>{const e=document.createElement("div");e.className=`day-event ${categoryClass(s.category)}`;const t=s.start_time?s.start_time.slice(0,5)+" ":"";e.textContent=t+s.title;ev.appendChild(e)});
     peopleRecords.filter(r=>r.event_date===v && r.status!=="취소").slice(0,3).forEach(r=>{const e=document.createElement("div");e.className=`day-event ${r.event_type==="퇴사"?"resignation":"new-hire"}`;e.textContent=`${r.event_type==="퇴사"?"퇴사":"입차"} · ${r.name} (${r.shift_type})`;ev.appendChild(e)});
-    day.onclick=()=>{selectedDate=new Date(`${v}T12:00:00`);currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);activeCategory="all";document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));document.querySelector('[data-category="all"]').classList.add("active");renderCalendar();renderScheduleList()};
+    day.onclick=()=>{selectedDate=new Date(`${v}T12:00:00`);currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);activeCategory="all";document.querySelectorAll(".filter").forEach(b=>b.classList.remove("active"));document.querySelector('[data-category="all"]').classList.add("active");renderCalendar();renderScheduleList();updateOverview()};
     cal.appendChild(day);
   }
 }
@@ -375,6 +408,11 @@ if($("logoutBtn")) $("logoutBtn").onclick=signOut;
 $("refreshMembersBtn").onclick=loadMembers;
 if($("exportPeopleBtn"))$("exportPeopleBtn").onclick=exportPeopleCSV;
 if($("exportMembersBtn"))$("exportMembersBtn").onclick=exportMembersCSV;
+if($("exportSchedulesBtn"))$("exportSchedulesBtn").onclick=exportSchedulesCSV;
+if($("refreshAuditBtn"))$("refreshAuditBtn").onclick=loadAuditLogs;
+if($("notificationBtn"))$("notificationBtn").onclick=openNotifications;
+if($("closeNotifications"))$("closeNotifications").onclick=()=>$("notificationPanel").classList.add("hidden");
+if($("notificationList"))$("notificationList").onclick=e=>{const b=e.target.closest("[data-schedule-date]");if(!b)return;selectedDate=new Date(b.dataset.scheduleDate+"T12:00:00");currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);$("notificationPanel").classList.add("hidden");setWorkspaceView("calendar");renderCalendar();renderScheduleList();updateOverview()};
 fillRegionSelect($("personRegion"));fillRegionSelect($("peopleRegionFilter"),true);
 $("addPersonBtn").onclick=()=>openPersonModal();$("closePersonModal").onclick=()=>$("personModal").classList.add("hidden");$("cancelPersonBtn").onclick=()=>$("personModal").classList.add("hidden");
 $("personModal").querySelectorAll("[data-close-person]").forEach(el=>el.onclick=()=>$("personModal").classList.add("hidden"));$("personForm").onsubmit=savePerson;$("personType").onchange=updatePersonDateLabel;$("personRegion").onchange=toggleCustomRegion;
@@ -385,7 +423,7 @@ db.auth.onAuthStateChange((_event,session)=>{if(session){currentUser=session.use
 
 $("prevMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()-1,1);renderCalendar()};
 $("nextMonth").onclick=()=>{currentDate=new Date(currentDate.getFullYear(),currentDate.getMonth()+1,1);renderCalendar()};
-$("todayBtn").onclick=()=>{selectedDate=new Date();currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);renderCalendar();renderScheduleList()};
+$("todayBtn").onclick=()=>{selectedDate=new Date();currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);renderCalendar();renderScheduleList();updateOverview()};
 $("addScheduleBtn").onclick=()=>openModal();
 $("sidebarAddBtn").onclick=()=>openModal();
 $("sidebarTodayBtn").onclick=()=>{$("todayBtn").click()};
@@ -393,9 +431,9 @@ $("sideTodayBtn").onclick=()=>{$("todayBtn").click()};
 function setWorkspaceView(view){
   const app=$("appScreen");
   app.classList.toggle("member-view",view==="members");
-  app.classList.toggle("people-view",view==="people");
+  app.classList.toggle("people-view",view==="people");app.classList.toggle("audit-view",view==="audit");
   document.querySelectorAll(".nav-menu .nav-item").forEach(btn=>btn.classList.remove("active"));
-  const active=view==="members"?$("sidebarMemberBtn"):view==="people"?$("sidebarPeopleBtn") :$("sidebarCalendarBtn");
+  const active=view==="members"?$("sidebarMemberBtn"):view==="people"?$("sidebarPeopleBtn"):view==="audit"?$("sidebarAuditBtn") :$("sidebarCalendarBtn");
   if(active)active.classList.add("active");
   if(view==="members"){
     if(currentProfile?.role!=="admin"){
@@ -403,16 +441,18 @@ function setWorkspaceView(view){
       setWorkspaceView("calendar");
       return;
     }
-    $("memberAdminCard").classList.remove("hidden");$("peopleAdminCard").classList.add("hidden");
+    $("memberAdminCard").classList.remove("hidden");$("peopleAdminCard").classList.add("hidden");$("auditAdminCard").classList.add("hidden");
     loadMembers();
+  } else if(view==="audit"){if(currentProfile?.role!=="admin"){alert("변경 이력은 관리자만 볼 수 있습니다.");setWorkspaceView("calendar");return}$("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.add("hidden");$("auditAdminCard").classList.remove("hidden");loadAuditLogs();
   } else if(view==="people"){
     if(!currentProfile || (currentProfile.role!=="admin" && currentProfile.approval_status!=="approved")){alert("승인된 회원만 이용할 수 있습니다.");setWorkspaceView("calendar");return}
-    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.remove("hidden");loadPeople();
+    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.remove("hidden");$("auditAdminCard").classList.add("hidden");loadPeople();
   } else {
-    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.add("hidden");
+    $("memberAdminCard").classList.add("hidden");$("peopleAdminCard").classList.add("hidden");$("auditAdminCard").classList.add("hidden");
   }
 }
 $("sidebarMemberBtn").onclick=()=>setWorkspaceView("members");
+$("sidebarAuditBtn").onclick=()=>setWorkspaceView("audit");
 $("sidebarPeopleBtn").onclick=()=>setWorkspaceView("people");
 $("sidebarCalendarBtn").onclick=()=>setWorkspaceView("calendar");
 $("sidebarLogoutBtn").onclick=signOut;$("closeModal").onclick=closeModal;$("cancelBtn").onclick=closeModal;
