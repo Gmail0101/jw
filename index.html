@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>스케줄러</title>
+<title>JWLogistics 운영 대시보드</title>
 <link rel="stylesheet" href="style.css">
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -32,10 +32,11 @@
 
 <div id="appScreen" class="app hidden">
   <aside class="sidebar">
-    <div class="brand"><span class="brand-icon">▣</span><span>스케줄러</span></div>
-    <div class="brand-sub">함께 만드는 더 나은 일정 관리</div>
+    <div class="brand"><span class="brand-icon">▣</span><span>JWLogistics</span></div>
+    <div class="brand-sub">물류 운영 통합 관리</div>
     <nav class="nav-menu">
-      <button class="nav-item active" type="button" id="sidebarCalendarBtn"><span>▦</span>달력</button>
+      <button class="nav-item active" type="button" id="sidebarDashboardBtn"><span>▥</span>운영 대시보드</button>
+      <button class="nav-item" type="button" id="sidebarCalendarBtn"><span>▦</span>달력형 스케줄러</button>
       <button class="nav-item" type="button" id="sidebarAddBtn"><span>＋</span>일정 등록</button>
       <button class="nav-item" type="button" id="sidebarTodayBtn"><span>▤</span>내 일정</button>
       <button class="nav-item admin-nav hidden" type="button" id="sidebarMemberBtn"><span>♙</span>회원 관리</button><button class="nav-item admin-nav hidden" type="button" id="sidebarAuditBtn"><span>▤</span>변경 이력</button>
@@ -47,8 +48,8 @@
   <div class="workspace">
     <header class="topbar">
       <div>
-        <p class="eyebrow">일정 관리</p>
-        <h1>오늘도 편하게 일정을 관리하세요.</h1>
+        <p class="eyebrow">JW LOGISTICS</p>
+        <h1>물류 운영을 한눈에 관리하세요.</h1>
       </div>
       <div class="top-actions">
         <button class="notification" id="notificationBtn" type="button" aria-label="최근 알림">♧<i></i></button>
@@ -59,6 +60,24 @@
 
     <main class="dashboard">
       <section class="main-column">
+        <section id="opsDashboard" class="ops-dashboard">
+          <div class="ops-welcome"><div><span class="ops-kicker">JW LOGISTICS · OPERATIONS</span><h2>JW 운영 현황</h2><p>오늘의 물류 운영과 주요 일정을 한눈에 확인하세요.</p></div><div class="ops-date"><span>오늘</span><strong id="opsTodayDate">-</strong><small id="opsLiveStatus">운영 데이터 연결 중</small></div></div>
+          <div class="ops-stat-grid">
+            <button class="ops-stat-card" type="button" data-ops-action="calendar"><span class="ops-stat-icon blue">▦</span><span class="ops-stat-label">오늘 등록 일정</span><strong id="opsTodaySchedules">0</strong><small>오늘 날짜 기준</small></button>
+            <button class="ops-stat-card" type="button" data-ops-action="people"><span class="ops-stat-icon green">◷</span><span class="ops-stat-label">진행 중 입차·퇴사</span><strong id="opsInProgress">0</strong><small>예정 및 진행중 제외 완료/취소</small></button>
+            <button class="ops-stat-card" type="button" data-ops-action="calendar"><span class="ops-stat-icon violet">▤</span><span class="ops-stat-label">향후 7일 일정</span><strong id="opsWeekSchedules">0</strong><small>일반 일정 + 입차·퇴사</small></button>
+            <button class="ops-stat-card" type="button" data-ops-action="members"><span class="ops-stat-icon amber">♙</span><span class="ops-stat-label">승인 대기 회원</span><strong id="opsPendingMembers">0</strong><small>관리자 확인 필요</small></button>
+          </div>
+          <div class="ops-main-grid">
+            <section class="ops-panel ops-alert-panel"><div class="ops-panel-head"><div><span class="ops-kicker">NEEDS ATTENTION</span><h3>오늘의 확인 사항</h3></div><span class="ops-panel-mark">● 실시간 집계</span></div><div id="opsAlerts" class="ops-alert-list"><div class="ops-empty">운영 정보를 불러오는 중입니다.</div></div></section>
+            <section class="ops-panel"><div class="ops-panel-head"><div><span class="ops-kicker">SCHEDULE OVERVIEW</span><h3>일정 유형별 현황</h3></div><button class="ops-text-button" type="button" data-ops-action="calendar">전체 일정 보기 ↗</button></div><div id="opsCategoryBars" class="ops-category-bars"></div></section>
+          </div>
+          <div class="ops-bottom-grid">
+            <section class="ops-panel"><div class="ops-panel-head"><div><span class="ops-kicker">RECENT ACTIVITY</span><h3>최근 등록 일정</h3></div><button class="ops-text-button" type="button" data-ops-action="calendar">달력 열기 ↗</button></div><div id="opsRecentSchedules" class="ops-recent-list"></div></section>
+            <section class="ops-panel"><div class="ops-panel-head"><div><span class="ops-kicker">PEOPLE OPERATIONS</span><h3>입차·퇴사 예정</h3></div><button class="ops-text-button" type="button" data-ops-action="people">관리 화면 ↗</button></div><div id="opsPeopleUpcoming" class="ops-upcoming-list"></div></section>
+          </div>
+          <div class="ops-footer-note"><span>JWLogistics 운영 대시보드</span><span>표시 데이터는 로그인한 계정의 Supabase 권한 범위 내에서 집계됩니다.</span></div>
+        </section>
         <section class="overview-stats"><article class="overview-stat"><span>오늘 일정</span><strong id="overviewToday">0건</strong></article><article class="overview-stat"><span>향후 7일 일정</span><strong id="overviewWeek">0건</strong></article><article class="overview-stat"><span>이미지 첨부 일정</span><strong id="overviewImages">0건</strong></article><article class="overview-stat"><span>선택 날짜</span><strong id="overviewSelected">0건</strong></article></section><div class="calendar-toolbar">
           <div class="month-nav">
             <button id="prevMonth" class="circle-btn" aria-label="이전 달">‹</button>
