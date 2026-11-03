@@ -190,3 +190,18 @@ body.image-lightbox-open{overflow:hidden}
 @keyframes opsFade{from{opacity:0;transform:translateY(5px)}to{opacity:1;transform:translateY(0)}}
 @media(max-width:1050px){.ops-stat-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.ops-main-grid,.ops-bottom-grid{grid-template-columns:1fr 1fr}}
 @media(max-width:700px){.ops-welcome{align-items:flex-start;flex-direction:column}.ops-date{width:100%;box-sizing:border-box}.ops-stat-grid{gap:9px}.ops-stat-card{padding:13px;min-height:132px}.ops-stat-card strong{font-size:25px}.ops-main-grid,.ops-bottom-grid{grid-template-columns:1fr;gap:11px}.ops-panel{padding:16px}.ops-footer-note{flex-direction:column;gap:4px}.ops-panel-head h3{font-size:15px}.ops-text-button{font-size:10px}.ops-welcome h2{font-size:25px}}
+
+/* Dashboard: today's registered schedules */
+.ops-today-block{margin-top:22px;padding-top:18px;border-top:1px solid #edf1f7}
+.ops-today-head{display:flex;align-items:center;justify-content:space-between;gap:12px;margin-bottom:10px}
+.ops-today-head strong{font-size:15px;color:#263754;font-weight:800}
+.ops-today-head span{font-size:12px;color:#8996aa}
+.ops-today-list{display:grid;gap:8px}
+.ops-today-row{width:100%;display:flex;align-items:center;gap:12px;text-align:left;padding:12px 14px;border:1px solid #e8edf5;border-radius:13px;background:#fff;cursor:pointer;color:inherit;transition:background .15s,border-color .15s}
+.ops-today-row:hover{background:#f7f9fd;border-color:#cfdcf2}
+.ops-today-kind{flex:0 0 auto;padding:6px 9px;border-radius:8px;font-size:11px;font-weight:800;background:#edf4ff;color:#4774bb}
+.ops-today-kind.person{background:#eaf8f1;color:#15966c}
+.ops-today-main{display:grid;gap:3px;min-width:0;flex:1}
+.ops-today-main strong{font-size:14px;color:#2b3b57;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.ops-today-main small{font-size:12px;color:#8996aa}
+.ops-today-row>b{font-size:20px;color:#aab5c5}
