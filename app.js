@@ -238,7 +238,7 @@ function updateOpsDashboard(){
   const endDate=new Date();endDate.setDate(endDate.getDate()+7);const end=dateString(endDate);
   const fmtDate=new Date().toLocaleDateString("ko-KR",{year:"numeric",month:"long",day:"numeric",weekday:"short"});
   const set=(id,value)=>{const el=$(id);if(el)el.textContent=value};
-  set("opsTodayDate",fmtDate);set("opsLiveStatus","● Supabase 데이터 연결됨");
+  set("opsTodayDate",fmtDate);
   const memberCard=$("opsPendingMembers")?.closest(".ops-stat-card");if(memberCard)memberCard.classList.toggle("hidden",currentProfile?.role!=="admin");
   const activePeople=peopleRecords.filter(r=>r.status!=="취소");
   const todaySchedules=allSchedules.filter(s=>s.schedule_date===today).length+activePeople.filter(r=>r.event_date===today).length;
@@ -258,6 +258,12 @@ function updateOpsDashboard(){
   const noManager=activePeople.filter(r=>!String(r.manager||"").trim()&&r.status!=="완료");
   if(noManager.length)alerts.push({icon:"＋",title:`담당자 미지정 ${noManager.length}건`,desc:"담당자를 지정하면 운영 누락을 줄일 수 있습니다.",action:"people"});
   if($("opsAlerts"))$("opsAlerts").innerHTML=alerts.length?alerts.slice(0,4).map(a=>`<button type="button" class="ops-alert-item" data-ops-action="${a.action}"><span class="ops-alert-icon">${a.icon}</span><span><strong>${a.title}</strong><small>${a.desc}</small></span><b>›</b></button>`).join(""):'<div class="ops-empty success">확인이 필요한 항목이 없습니다. 현재 등록된 운영 정보를 기준으로 표시합니다.</div>';
+  const todayRows=[
+    ...allSchedules.filter(s=>s.schedule_date===today).map(s=>({kind:"schedule",title:s.title||"제목 없는 일정",sub:s.category||"일반 일정",action:"calendar"})),
+    ...activePeople.filter(r=>r.event_date===today).map(r=>({kind:"person",title:r.name||"이름 미입력",sub:r.event_type==="퇴사"?"퇴사":"신규입차",action:"people"}))
+  ];
+  if($("opsTodayItems"))$("opsTodayItems").innerHTML=todayRows.length?todayRows.map(r=>`<button type="button" class="ops-today-row" data-ops-action="${r.action}"><span class="ops-today-kind ${r.kind}">${r.kind==="person"?"입차·퇴사":"일정"}</span><span class="ops-today-main"><strong>${escapeHtml(r.title)}</strong><small>${escapeHtml(r.sub)}</small></span><b>›</b></button>`).join(""):'<div class="ops-empty">오늘 등록된 일정이나 입차·퇴사 정보가 없습니다.</div>';
+
   const recent=[...allSchedules.map(s=>({...s,_kind:"schedule",_date:s.schedule_date,_title:s.title,_sub:s.category})),...activePeople.map(r=>({...r,_kind:"person",_date:r.event_date,_title:r.name,_sub:r.event_type}))].sort((a,b)=>String(b._date).localeCompare(String(a._date))).slice(0,5);
   if($("opsRecentSchedules"))$("opsRecentSchedules").innerHTML=recent.length?recent.map(r=>`<div class="ops-recent-row"><span class="ops-recent-dot ${r._kind==="person"?(r.event_type==="퇴사"?"exit":"hire"):categoryClass(r.category)}"></span><span class="ops-recent-main"><strong>${escapeHtml(r._title||"")}</strong><small>${escapeHtml(r._sub||"")}</small></span><time>${escapeHtml(r._date||"")}</time></div>`).join(""):'<div class="ops-empty">아직 등록된 일정이 없습니다.</div>';
   const upcoming=activePeople.filter(r=>r.event_date>=today).sort((a,b)=>a.event_date.localeCompare(b.event_date)).slice(0,5);
