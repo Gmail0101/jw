@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="ko" class="scroll-smooth">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JWLogistics - 쿠팡 퀵플렉스 & 삼성웰스토리 배송기사 채용</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts (Noto Sans KR & Montserrat) -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Noto+Sans+KR:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        toss: {
+                            blue: '#3182f6',
+                            blueHover: '#1b64da',
+                            lightBlue: '#e8f3ff',
+                            darkBlue: '#1b51a3',
+                            bg: '#f9fafb',
+                            card: '#ffffff',
+                            text: '#191f28',
+                            subtext: '#4e5968',
+                            muted: '#8b95a1',
+                            line: '#e5e8eb',
+                            coupang: '#e60012',
+                            welstory: '#005bac'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Noto Sans KR', '-apple-system', 'BlinkMacSystemFont', 'sans-serif'],
+                        en: ['Montserrat', 'sans-serif']
+                    },
+                    borderRadius: {
+                        '4xl': '2rem',
+                        '5xl': '2.5rem'
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            font-family: 'Noto Sans KR', sans-serif;
+            background-color: #f9fafb;
+            color: #191f28;
+            word-break: keep-all;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* Toss Scroll Fade-In Effect */
+        .fade-in-section {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: opacity 0.7s cubic-bezier(0.16, 1, 0.3, 1), transform 0.7s cubic-bezier(0.16, 1, 0.3, 1);
+            will-change: opacity, transform;
+        }
+        .fade-in-section.is-visible {
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        /* Toss Card Hover Effect */
+        .toss-card {
+            background-color: #ffffff;
+            border-radius: 24px;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.03), 0 1px 3px rgba(0, 0, 0, 0.02);
+            transition: transform 0.25s ease, box-shadow 0.25s ease;
+        }
+        .toss-card:hover {
+            transform: translateY(-4px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.07), 0 2px 6px rgba(0, 0, 0, 0.03);
+        }
+
+        /* Custom Slider Style */
+        input[type=range] {
+            -webkit-appearance: none;
+            width: 100%;
+            background: transparent;
+        }
+        input[type=range]:focus {
+            outline: none;
+        }
+        input[type=range]::-webkit-slider-runnable-track {
+            width: 100%;
+            height: 10px;
+            cursor: pointer;
+            background: #e5e8eb;
+            border-radius: 9999px;
+        }
+        input[type=range]::-webkit-slider-thumb {
+            height: 26px;
+            width: 26px;
+            border-radius: 50%;
+            background: #3182f6;
+            cursor: pointer;
+            -webkit-appearance: none;
+            margin-top: -8px;
+            box-shadow: 0 4px 10px rgba(49, 130, 246, 0.4);
+            transition: transform 0.15s ease;
+        }
+        input[type=range]::-webkit-slider-thumb:hover {
+            transform: scale(1.15);
+        }
+    </style>
+</head>
+<body class="selection:bg-toss-lightBlue selection:text-toss-blue">
+
+    <!-- Header Navigation (Minimal Sticky Header) -->
+    <header id="header" class="fixed top-0 left-0 w-full z-50 bg-white/80 backdrop-blur-md transition-all border-b border-toss-line/60 py-4 px-4 sm:px-8">
+        <div class="max-w-6xl mx-auto flex items-center justify-between">
+            <!-- Brand Logo -->
+            <a href="#" class="flex items-center gap-2 group">
+                <div class="w-9 h-9 rounded-xl bg-toss-blue flex items-center justify-center text-white font-en font-black text-lg">
+                    JW
+                </div>
+                <div class="flex items-center gap-1.5">
+                    <span class="font-en font-extrabold text-xl tracking-tight text-toss-text">JW<span class="text-toss-blue">Logistics</span></span>
+                    <span class="text-[11px] font-bold px-2 py-0.5 rounded-md bg-toss-lightBlue text-toss-blue">공식 파트너</span>
+                </div>
+            </a>
+
+            <!-- Desktop Navigation -->
+            <nav class="hidden md:flex items-center space-x-8 text-sm font-semibold text-toss-subtext">
+                <a href="#comparison" class="hover:text-toss-blue transition-colors">모집 분야 비교</a>
+                <a href="#calculator" class="hover:text-toss-blue transition-colors">수익 시뮬레이터</a>
+                <a href="#benefits" class="hover:text-toss-blue transition-colors">JW 만의 혜택</a>
+                <a href="#faq" class="hover:text-toss-blue transition-colors">자주 묻는 질문</a>
+            </nav>
+
+            <!-- CTA Button -->
+            <div class="flex items-center gap-3">
+                <a href="#apply" class="px-5 py-2.5 rounded-2xl text-sm font-bold text-white bg-toss-blue hover:bg-toss-blueHover transition-all shadow-md shadow-toss-blue/20">
+                    1분 간편 지원
+                </a>
+            </div>
+        </div>
+    </header>
+
+    <!-- HERO SECTION (Toss Style Typography & Big CTA) -->
+    <section class="pt-36 pb-20 sm:pt-44 sm:pb-28 px-4 sm:px-8 bg-gradient-to-b from-white via-toss-bg to-toss-bg">
+        <div class="max-w-4xl mx-auto text-center space-y-8">
+            
+            <!-- Category Chip Badge -->
+            <div class="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-toss-lightBlue text-toss-blue text-xs sm:text-sm font-extrabold tracking-tight">
+                <span class="w-2 h-2 rounded-full bg-toss-blue animate-pulse"></span>
+                쿠팡 퀵플렉스 & 삼성웰스토리 공식 전담 물류사
+            </div>
+
+            <!-- Big Headline -->
+            <h1 class="text-4xl sm:text-6xl font-black text-toss-text tracking-tight leading-[1.25]">
+                원하는 조건으로 일하고,<br>
+                <span class="text-toss-blue">안정적인 고수익</span>을 시작하세요.
+            </h1>
+
+            <p class="text-base sm:text-xl text-toss-subtext font-medium leading-relaxed max-w-2xl mx-auto">
+                초보자도 1:1 동승 교육으로 당일 적응 완료.<br class="hidden sm:inline">
+                차량이 없어도, 경험이 없어도 JWLogistics와 함께라면 안심입니다.
+            </p>
+
+            <!-- Big CTA Buttons -->
+            <div class="flex flex-col sm:flex-row items-center justify-center gap-4 pt-4">
+                <a href="#apply" class="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-base text-white bg-toss-blue hover:bg-toss-blueHover transition-all shadow-lg shadow-toss-blue/25 text-center flex items-center justify-center gap-2">
+                    <span>1분 간편 지원하기</span>
+                    <i class="fa-solid fa-arrow-right text-xs"></i>
+                </a>
+                <a href="#calculator" class="w-full sm:w-auto px-8 py-4 rounded-2xl font-bold text-base text-toss-subtext bg-white border border-toss-line hover:bg-slate-50 transition-all text-center flex items-center justify-center gap-2 shadow-sm">
+                    <span>내 예상 수입 계산하기</span>
+                    <i class="fa-solid fa-calculator text-xs text-toss-muted"></i>
+                </a>
+            </div>
+
+            <!-- Quick Metrics Header Cards -->
+            <div class="pt-12 grid grid-cols-2 sm:grid-cols-4 gap-4 max-w-3xl mx-auto">
+                <div class="p-5 rounded-2xl bg-white border border-toss-line/70 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-toss-text font-en">월 550만원+</div>
+                    <div class="text-xs font-semibold text-toss-muted mt-1">평균 정산 금액</div>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-toss-line/70 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-toss-text font-en">100%</div>
+                    <div class="text-xs font-semibold text-toss-muted mt-1">원하는 구역 최단 배치</div>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-toss-line/70 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-toss-text font-en">1:1</div>
+                    <div class="text-xs font-semibold text-toss-muted mt-1">초보 전담 동승 교육</div>
+                </div>
+                <div class="p-5 rounded-2xl bg-white border border-toss-line/70 text-center">
+                    <div class="text-2xl sm:text-3xl font-extrabold text-toss-blue font-en">0원</div>
+                    <div class="text-xs font-semibold text-toss-muted mt-1">초기 가입비/소개비</div>
+                </div>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- JOB COMPARISON SECTION (Coupang Quickflex vs Samsung Welstory) -->
+    <section id="comparison" class="py-24 px-4 sm:px-8 max-w-6xl mx-auto fade-in-section">
+        <div class="text-center max-w-2xl mx-auto mb-16 space-y-3">
+            <span class="text-toss-blue font-extrabold text-xs tracking-widest uppercase">RECRUITMENT POSITIONS</span>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-toss-text">
+                나에게 딱 맞는 배송을 선택하세요
+            </h2>
+            <p class="text-toss-subtext text-base">
+                주간/야간 개인 맞춤 수입 구조의 쿠팡 퀵플렉스와 정시 퇴근 안정적인 삼성웰스토리 식자재 배송 중 선택 가능합니다.
+            </p>
+        </div>
+
+        <div class="grid md:grid-cols-2 gap-8">
+            
+            <!-- Coupang Quickflex Card -->
+            <div class="toss-card p-8 sm:p-10 border border-toss-line/80 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-red-500/5 rounded-full filter blur-2xl pointer-events-none"></div>
+
+                <div>
+                    <!-- Badge & Logo -->
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="px-3.5 py-1.5 rounded-full bg-red-50 text-toss-coupang text-xs font-extrabold">
+                            쿠팡 퀵플렉스 (Coupang)
+                        </span>
+                        <i class="fa-solid fa-box text-2xl text-toss-coupang"></i>
+                    </div>
+
+                    <!-- Title -->
+                    <h3 class="text-2xl sm:text-3xl font-black text-toss-text mb-3">
+                        내가 일한 만큼 벌어가는<br>
+                        <span class="text-toss-coupang">건당 단가 수입형</span>
+                    </h3>
+                    <p class="text-toss-subtext text-sm leading-relaxed mb-8">
+                        지정된 최단 동선 구역 내 물품 배송. 물량이 풍부해 노력한 만큼 고수익 창출이 가능합니다.
+                    </p>
+
+                    <!-- Spec list -->
+                    <div class="space-y-4 text-sm mb-8 border-t border-b border-toss-line/60 py-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">근무 시간</span>
+                            <span class="font-bold text-toss-text">주간 / 야간 선택 가능 (자율)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">평균 예상 월수입</span>
+                            <span class="font-extrabold text-toss-text font-en text-base">450만원 ~ 750만원+</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">권장 차량</span>
+                            <span class="font-bold text-toss-text">1톤 탑차 / 내장탑차 (임대 가능)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">배송 품목</span>
+                            <span class="font-bold text-toss-text">소형~중형 일반 택배 소화물</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">배치 구역</span>
+                            <span class="font-bold text-toss-text">거주지 인근 최우선 배정</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#apply" onclick="selectPosition('coupang')" class="w-full py-4 rounded-2xl bg-slate-900 hover:bg-black text-white font-bold text-center text-sm transition-all shadow-md">
+                    쿠팡 퀵플렉스 지원하기
+                </a>
+            </div>
+
+            <!-- Samsung Welstory Card -->
+            <div class="toss-card p-8 sm:p-10 border border-toss-line/80 flex flex-col justify-between relative overflow-hidden">
+                <div class="absolute top-0 right-0 w-32 h-32 bg-blue-500/5 rounded-full filter blur-2xl pointer-events-none"></div>
+
+                <div>
+                    <!-- Badge & Logo -->
+                    <div class="flex items-center justify-between mb-6">
+                        <span class="px-3.5 py-1.5 rounded-full bg-blue-50 text-toss-welstory text-xs font-extrabold">
+                            삼성웰스토리 식자재 배송
+                        </span>
+                        <i class="fa-solid fa-truck-ramp-box text-2xl text-toss-welstory"></i>
+                    </div>
+
+                    <!-- Title -->
+                    <h3 class="text-2xl sm:text-3xl font-black text-toss-text mb-3">
+                        정시 퇴근과 규칙적인 루틴<br>
+                        <span class="text-toss-welstory">고정 노선 수입형</span>
+                    </h3>
+                    <p class="text-toss-subtext text-sm leading-relaxed mb-8">
+                        식품/외식 프랜차이즈 지정 매장 고정 코스 배송. 매일 일정하여 워라밸 유지가 월등합니다.
+                    </p>
+
+                    <!-- Spec list -->
+                    <div class="space-y-4 text-sm mb-8 border-t border-b border-toss-line/60 py-6">
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">근무 시간</span>
+                            <span class="font-bold text-toss-text">새벽/오전 출근 ~ 오후 조기 퇴근</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">평균 예상 월수입</span>
+                            <span class="font-extrabold text-toss-text font-en text-base">400만원 ~ 600만원 (고정)</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">권장 차량</span>
+                            <span class="font-bold text-toss-text">1톤 ~ 2.5톤 냉동/냉장 탑차</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">배송 품목</span>
+                            <span class="font-bold text-toss-text">식자재 및 신선 식품 박스</span>
+                        </div>
+                        <div class="flex justify-between items-center">
+                            <span class="text-toss-muted font-medium">배송 방식</span>
+                            <span class="font-bold text-toss-text">지정 거래처 고정 노선 정기 납품</span>
+                        </div>
+                    </div>
+                </div>
+
+                <a href="#apply" onclick="selectPosition('welstory')" class="w-full py-4 rounded-2xl bg-toss-blue hover:bg-toss-blueHover text-white font-bold text-center text-sm transition-all shadow-md shadow-toss-blue/20">
+                    삼성웰스토리 식자재 지원하기
+                </a>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- TOSS STYLE INCOME CALCULATOR (Interactive Slider) -->
+    <section id="calculator" class="py-24 px-4 sm:px-8 bg-white border-y border-toss-line/60 fade-in-section">
+        <div class="max-w-4xl mx-auto">
+            <div class="text-center max-w-xl mx-auto mb-14 space-y-3">
+                <span class="text-toss-blue font-extrabold text-xs tracking-widest uppercase">INCOME SIMULATION</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-toss-text">
+                    내 예상 월 수입은 얼마일까요?
+                </h2>
+                <p class="text-toss-subtext text-sm">
+                    근무 조건 슬라이더를 조절하여 예상 수입을 실시간으로 확인해 보세요.
+                </p>
+            </div>
+
+            <!-- Calculator Card -->
+            <div class="bg-toss-bg border border-toss-line p-8 sm:p-12 rounded-4xl shadow-sm">
+                <div class="grid md:grid-cols-12 gap-10 items-center">
+                    
+                    <!-- Left Slider Inputs -->
+                    <div class="md:col-span-7 space-y-8">
+                        
+                        <!-- Slider 1: Work Days -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <label class="font-bold text-toss-text">주당 근무 일수</label>
+                                <span id="daysVal" class="font-extrabold text-toss-blue font-en text-base">주 6일</span>
+                            </div>
+                            <input type="range" id="daysSlider" min="4" max="6" step="1" value="6">
+                            <div class="flex justify-between text-xs text-toss-muted font-medium">
+                                <span>주 4일</span>
+                                <span>주 5일</span>
+                                <span>주 6일</span>
+                            </div>
+                        </div>
+
+                        <!-- Slider 2: Daily Deliveries / Rounds -->
+                        <div class="space-y-3">
+                            <div class="flex justify-between items-center text-sm">
+                                <label class="font-bold text-toss-text">일일 평균 배송량 (건/회)</label>
+                                <span id="volumeVal" class="font-extrabold text-toss-blue font-en text-base">220 건</span>
+                            </div>
+                            <input type="range" id="volumeSlider" min="120" max="320" step="10" value="220">
+                            <div class="flex justify-between text-xs text-toss-muted font-medium">
+                                <span>120건 (라이트)</span>
+                                <span>220건 (표준)</span>
+                                <span>320건 (고수익)</span>
+                            </div>
+                        </div>
+
+                        <!-- Notice -->
+                        <p class="text-xs text-toss-muted leading-relaxed">
+                            * 본 예상 수입은 부가세 및 기본 수수료 반영 전 평균 정산 기준이며, 개인 숙련도 및 배송 구역에 따라 차이가 발생할 수 있습니다.
+                        </p>
+                    </div>
+
+                    <!-- Right Display Output Card -->
+                    <div class="md:col-span-5 bg-white p-8 rounded-3xl border border-toss-line text-center space-y-6 shadow-sm">
+                        <span class="text-xs font-bold text-toss-muted uppercase tracking-wider">ESTIMATED MONTHLY REVENUE</span>
+                        
+                        <div>
+                            <div class="text-xs text-toss-subtext font-semibold mb-1">예상 월 매출액</div>
+                            <div id="totalSalary" class="text-4xl sm:text-5xl font-black text-toss-blue font-en tracking-tight">
+                                594만원
+                            </div>
+                        </div>
+
+                        <div class="pt-4 border-t border-toss-line space-y-2 text-xs text-toss-subtext">
+                            <div class="flex justify-between">
+                                <span>연간 예상 수입</span>
+                                <span id="yearlySalary" class="font-bold text-toss-text font-en">7,128 만원</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span>초보자 평균 적응 기간</span>
+                                <span class="font-bold text-toss-text">약 3 ~ 5일</span>
+                            </div>
+                        </div>
+
+                        <a href="#apply" class="block w-full py-3.5 rounded-xl bg-toss-lightBlue hover:bg-blue-100 text-toss-blue font-bold text-xs transition-colors">
+                            이 조건으로 지원 신청하기
+                        </a>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- JW LOGISTICS EXCLUSIVE BENEFITS -->
+    <section id="benefits" class="py-24 px-4 sm:px-8 max-w-6xl mx-auto fade-in-section">
+        <div class="text-center max-w-xl mx-auto mb-16 space-y-3">
+            <span class="text-toss-blue font-extrabold text-xs tracking-widest uppercase">JW ADVANTAGES</span>
+            <h2 class="text-3xl sm:text-4xl font-extrabold text-toss-text">
+                기사님이 안심하고 일하는 이유
+            </h2>
+            <p class="text-toss-subtext text-sm">
+                JWLogistics는 기사님의 부당한 부담을 최소화하고 안정적인 정착을 지원합니다.
+            </p>
+        </div>
+
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
+            
+            <!-- Benefit 1 -->
+            <div class="toss-card p-8 border border-toss-line/70">
+                <div class="w-12 h-12 rounded-2xl bg-toss-lightBlue text-toss-blue flex items-center justify-center text-xl mb-6">
+                    <i class="fa-solid fa-truck-front"></i>
+                </div>
+                <h3 class="text-lg font-bold text-toss-text mb-2">차량 임대 / 임대차 지원</h3>
+                <p class="text-toss-subtext text-xs leading-relaxed">
+                    본인 소유 차량이 없어도 즉시 일할 수 있도록 신형 탑차 임대 및 동차 지원 연계 시스템을 완비했습니다.
+                </p>
+            </div>
+
+            <!-- Benefit 2 -->
+            <div class="toss-card p-8 border border-toss-line/70">
+                <div class="w-12 h-12 rounded-2xl bg-toss-lightBlue text-toss-blue flex items-center justify-center text-xl mb-6">
+                    <i class="fa-solid fa-user-ninja"></i>
+                </div>
+                <h3 class="text-lg font-bold text-toss-text mb-2">1:1 전담 동승 교육</h3>
+                <p class="text-toss-subtext text-xs leading-relaxed">
+                    배송 노하우부터 앱 사용법, 동선 효율화까지 베테랑 선임 기사님이 노하우를 100% 밀착 전수합니다.
+                </p>
+            </div>
+
+            <!-- Benefit 3 -->
+            <div class="toss-card p-8 border border-toss-line/70">
+                <div class="w-12 h-12 rounded-2xl bg-toss-lightBlue text-toss-blue flex items-center justify-center text-xl mb-6">
+                    <i class="fa-solid fa-map-location-dot"></i>
+                </div>
+                <h3 class="text-lg font-bold text-toss-text mb-2">거주지 최단 구역 배치</h3>
+                <p class="text-toss-subtext text-xs leading-relaxed">
+                    불필요한 이동 시간을 줄이고 배송 효율을 최고로 높이기 위해 자택 근처 최우선 거점 구역을 배정합니다.
+                </p>
+            </div>
+
+            <!-- Benefit 4 -->
+            <div class="toss-card p-8 border border-toss-line/70">
+                <div class="w-12 h-12 rounded-2xl bg-toss-lightBlue text-toss-blue flex items-center justify-center text-xl mb-6">
+                    <i class="fa-solid fa-hand-holding-dollar"></i>
+                </div>
+                <h3 class="text-lg font-bold text-toss-text mb-2">투명하고 정확한 정산</h3>
+                <p class="text-toss-subtext text-xs leading-relaxed">
+                    정해진 정산일 밀림 없는 100% 정시 지급. 세무 처리 지원 및 투명한 정산 내역서를 매월 제공합니다.
+                </p>
+            </div>
+
+        </div>
+    </section>
+
+    <!-- FAQ ACCORDION SECTION (Toss Light Style) -->
+    <section id="faq" class="py-24 px-4 sm:px-8 bg-white border-t border-toss-line/60 fade-in-section">
+        <div class="max-w-3xl mx-auto">
+            <div class="text-center mb-14 space-y-3">
+                <span class="text-toss-blue font-extrabold text-xs tracking-widest uppercase">FREQUENTLY ASKED QUESTIONS</span>
+                <h2 class="text-3xl sm:text-4xl font-extrabold text-toss-text">궁금한 점을 바로 풀어드릴게요</h2>
+            </div>
+
+            <!-- Accordion List -->
+            <div class="space-y-4">
+                
+                <!-- FAQ Item 1 -->
+                <div class="border border-toss-line rounded-2xl overflow-hidden transition-all">
+                    <button class="faq-btn w-full p-6 text-left font-bold text-toss-text flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span>Q. 화물 운송 자격증이나 탑차가 없어도 지원이 가능한가요?</span>
+                        <i class="fa-solid fa-chevron-down text-toss-muted transition-transform duration-200"></i>
+                    </button>
+                    <div class="faq-content hidden p-6 pt-0 text-sm text-toss-subtext leading-relaxed border-t border-slate-100">
+                        네, 가능합니다! 지원 후 화물운송종사자격증 취득 절차를 친절히 안내해 드리며, 차량이 없는 경우 JWLogistics의 차량 지원/임대 프로그램을 통해 초기 부담 없이 바로 업무를 시작하실 수 있습니다.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 2 -->
+                <div class="border border-toss-line rounded-2xl overflow-hidden transition-all">
+                    <button class="faq-btn w-full p-6 text-left font-bold text-toss-text flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span>Q. 초보자인데 첫 달 수입은 어느 정도 되나요?</span>
+                        <i class="fa-solid fa-chevron-down text-toss-muted transition-transform duration-200"></i>
+                    </button>
+                    <div class="faq-content hidden p-6 pt-0 text-sm text-toss-subtext leading-relaxed border-t border-slate-100">
+                        초보자의 경우 첫 1~2주는 적응 기간으로 물량을 조절하여 배정받습니다. 1:1 동승 교육을 마치면 평균 400만원~500만원 이상의 안정적인 수입을 달성하게 되며, 숙련도 상승 시 더 높은 고수익이 가능합니다.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 3 -->
+                <div class="border border-toss-line rounded-2xl overflow-hidden transition-all">
+                    <button class="faq-btn w-full p-6 text-left font-bold text-toss-text flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span>Q. 쿠팡 퀵플렉스와 삼성웰스토리 중 어떤 것이 나에게 맞을까요?</span>
+                        <i class="fa-solid fa-chevron-down text-toss-muted transition-transform duration-200"></i>
+                    </button>
+                    <div class="faq-content hidden p-6 pt-0 text-sm text-toss-subtext leading-relaxed border-t border-slate-100">
+                        자율적인 시간 조절과 유연한 물량 조절로 고수익을 원하시면 **쿠팡 퀵플렉스**, 규칙적인 정시 출퇴근과 고정 노선의 안정성을 원하시면 **삼성웰스토리 식자재 배송**을 추천합니다. 상담 시 적성에 맞는 직무를 조율해 드립니다.
+                    </div>
+                </div>
+
+                <!-- FAQ Item 4 -->
+                <div class="border border-toss-line rounded-2xl overflow-hidden transition-all">
+                    <button class="faq-btn w-full p-6 text-left font-bold text-toss-text flex justify-between items-center hover:bg-slate-50 transition-colors">
+                        <span>Q. 가입비나 계약금 같은 별도 비용이 요구되나요?</span>
+                        <i class="fa-solid fa-chevron-down text-toss-muted transition-transform duration-200"></i>
+                    </button>
+                    <div class="faq-content hidden p-6 pt-0 text-sm text-toss-subtext leading-relaxed border-t border-slate-100">
+                        전혀 없습니다. JWLogistics는 기사님에게 알선비, 가입비, 금전적 대가를 절대로 요구하지 않습니다. 불법 수수료 없는 투명한 정식 계약만 체결합니다.
+                    </div>
+                </div>
+
+            </div>
+        </div>
+    </section>
+
+    <!-- SIMPLE APPLICATION FORM (Toss Input Style) -->
+    <section id="apply" class="py-24 px-4 sm:px-8 max-w-3xl mx-auto fade-in-section">
+        <div class="bg-white border border-toss-line p-8 sm:p-12 rounded-4xl shadow-lg">
+            <div class="text-center mb-10 space-y-2">
+                <span class="text-toss-blue font-extrabold text-xs tracking-widest uppercase">FAST APPLY</span>
+                <h2 class="text-3xl font-extrabold text-toss-text">1분 간편 지원서 작성</h2>
+                <p class="text-toss-subtext text-xs sm:text-sm">
+                    지원서를 남겨주시면 채용 담당자가 24시간 이내에 친절히 상담 연락을 드립니다.
+                </p>
+            </div>
+
+            <form id="applyForm" onsubmit="handleApplySubmit(event)" class="space-y-6">
+                <!-- Name -->
+                <div>
+                    <label class="block text-xs font-bold text-toss-text mb-2">이름 *</label>
+                    <input type="text" required placeholder="홍길동" class="w-full bg-toss-bg border border-toss-line rounded-2xl px-4 py-3.5 text-sm text-toss-text focus:outline-none focus:border-toss-blue transition-colors">
+                </div>
+
+                <!-- Phone -->
+                <div>
+                    <label class="block text-xs font-bold text-toss-text mb-2">연락처 *</label>
+                    <input type="tel" required placeholder="010-0000-0000" class="w-full bg-toss-bg border border-toss-line rounded-2xl px-4 py-3.5 text-sm text-toss-text focus:outline-none focus:border-toss-blue transition-colors">
+                </div>
+
+                <!-- Preferred Position -->
+                <div>
+                    <label class="block text-xs font-bold text-toss-text mb-2">희망 모집 분야 *</label>
+                    <select id="positionSelect" class="w-full bg-toss-bg border border-toss-line rounded-2xl px-4 py-3.5 text-sm text-toss-text focus:outline-none focus:border-toss-blue transition-colors">
+                        <option value="coupang">쿠팡 퀵플렉스 (주간/야간 건당 수입형)</option>
+                        <option value="welstory">삼성웰스토리 (식자재 정기 고정 노선)</option>
+                        <option value="consult">상담 후 결정하고 싶어요</option>
+                    </select>
+                </div>
+
+                <!-- Region & Vehicle Status -->
+                <div class="grid sm:grid-cols-2 gap-4">
+                    <div>
+                        <label class="block text-xs font-bold text-toss-text mb-2">희망 근무 지역 *</label>
+                        <input type="text" required placeholder="예: 서울 송파구 / 경기 성남시" class="w-full bg-toss-bg border border-toss-line rounded-2xl px-4 py-3.5 text-sm text-toss-text focus:outline-none focus:border-toss-blue transition-colors">
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-toss-text mb-2">차량 보유 여부 *</label>
+                        <select class="w-full bg-toss-bg border border-toss-line rounded-2xl px-4 py-3.5 text-sm text-toss-text focus:outline-none focus:border-toss-blue transition-colors">
+                            <option value="no">차량 없음 (임대 지원 희망)</option>
+                            <option value="yes">탑차 보유 중 (1톤/냉장/냉동 등)</option>
+                            <option value="passenger">승용차만 보유</option>
+                        </select>
+                    </div>
+                </div>
+
+                <!-- Checkbox -->
+                <div class="flex items-center gap-2 pt-2">
+                    <input type="checkbox" id="tossPrivacy" required class="rounded border-toss-line text-toss-blue focus:ring-toss-blue w-4 h-4">
+                    <label for="tossPrivacy" class="text-xs text-toss-subtext">개인정보 수집 및 상담 목적 활용에 동의합니다.</label>
+                </div>
+
+                <!-- Submit Button -->
+                <button type="submit" class="w-full py-4 rounded-2xl font-bold text-base text-white bg-toss-blue hover:bg-toss-blueHover transition-all shadow-lg shadow-toss-blue/20">
+                    간편 지원서 제출하기
+                </button>
+            </form>
+        </div>
+    </section>
+
+    <!-- FOOTER -->
+    <footer class="bg-white border-t border-toss-line py-12 px-4 sm:px-8 text-xs text-toss-muted">
+        <div class="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">
+            <div class="space-y-2 text-center md:text-left">
+                <div class="flex items-center justify-center md:justify-start gap-2">
+                    <span class="font-en font-black text-sm text-toss-text">JW LOGISTICS</span>
+                    <span class="text-[10px] px-2 py-0.5 rounded bg-slate-100 text-slate-600">공식 물류 전담 파트너사</span>
+                </div>
+                <p>주식회사 제이더블유로지스틱스 | 대전 유성구 장대로 791 4층 </p>
+                <p>대표전화: 010-5057-0080 | 화물자동차 운송사업 정식 등록업체</p>
+            </div>
+            <div class="text-center md:text-right">
+                <p>© 2026 JWLogistics. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- TOAST NOTIFICATION -->
+    <div id="toast" class="fixed bottom-8 left-1/2 -translate-x-1/2 z-50 transform translate-y-20 opacity-0 transition-all duration-300 bg-toss-text text-white px-6 py-4 rounded-2xl shadow-2xl flex items-center gap-3">
+        <i class="fa-solid fa-circle-check text-toss-blue text-lg"></i>
+        <span class="text-sm font-semibold">지원서 제출이 완료되었습니다! 담당자가 곧 연락드립니다.</span>
+    </div>
+
+    <!-- JAVASCRIPT LOGIC -->
+    <script>
+        // Toss-style Intersection Observer for Scroll Animations
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    entry.target.classList.add('is-visible');
+                }
+            });
+        }, { threshold: 0.1 });
+
+        document.querySelectorAll('.fade-in-section').forEach(section => {
+            observer.observe(section);
+        });
+
+        // Interactive Income Calculator
+        const daysSlider = document.getElementById('daysSlider');
+        const volumeSlider = document.getElementById('volumeSlider');
+        const daysVal = document.getElementById('daysVal');
+        const volumeVal = document.getElementById('volumeVal');
+        const totalSalary = document.getElementById('totalSalary');
+        const yearlySalary = document.getElementById('yearlySalary');
+
+        function calculateSalary() {
+            const days = parseInt(daysSlider.value);
+            const volume = parseInt(volumeSlider.value);
+
+            daysVal.textContent = `주 ${days}일`;
+            volumeVal.textContent = `${volume} 건`;
+
+            // Standard Rate Calculation (approx avg payout per unit)
+            const pricePerPackage = 950; // Average net payout per item
+            const monthlyVolume = volume * (days * 4.3);
+            const monthlyGross = Math.round((monthlyVolume * pricePerPackage) / 10000);
+            const yearlyGross = Math.round((monthlyGross * 12));
+
+            totalSalary.textContent = `${monthlyGross.toLocaleString()}만원`;
+            yearlySalary.textContent = `${yearlyGross.toLocaleString()} 만원`;
+        }
+
+        daysSlider.addEventListener('input', calculateSalary);
+        volumeSlider.addEventListener('input', calculateSalary);
+
+        // Position Select Handler from Job Cards
+        function selectPosition(type) {
+            const select = document.getElementById('positionSelect');
+            if (type === 'coupang') select.value = 'coupang';
+            if (type === 'welstory') select.value = 'welstory';
+        }
+
+        // FAQ Accordion Handler
+        document.querySelectorAll('.faq-btn').forEach(btn => {
+            btn.addEventListener('click', () => {
+                const content = btn.nextElementSibling;
+                const icon = btn.querySelector('i');
+                content.classList.toggle('hidden');
+                icon.classList.toggle('rotate-180');
+            });
+        });
+
+        // Form Submit Handler
+        function handleApplySubmit(e) {
+            e.preventDefault();
+            const toast = document.getElementById('toast');
+            toast.classList.remove('translate-y-20', 'opacity-0');
+            toast.classList.add('translate-y-0', 'opacity-100');
+
+            setTimeout(() => {
+                toast.classList.remove('translate-y-0', 'opacity-100');
+                toast.classList.add('translate-y-20', 'opacity-0');
+            }, 3500);
+
+            document.getElementById('applyForm').reset();
+        }
+    </script>
+</body>
+</html>
