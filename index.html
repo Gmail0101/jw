@@ -52,6 +52,7 @@
         <h1>물류 운영을 한눈에 관리하세요.</h1>
       </div>
       <div class="top-actions">
+        <button class="comment-notification-bell" id="commentNotificationBtn" type="button" aria-label="댓글 알림">✉<span id="commentNotificationCount" class="comment-notification-count hidden">0</span></button>
         <button class="notification" id="notificationBtn" type="button" aria-label="최근 알림">♧<i></i></button>
         <div class="user-chip"><span class="avatar" id="avatarInitial">U</span><span id="userInfo">로그인 사용자</span><span class="chevron">⌄</span></div>
         <span id="roleBadge" class="role-badge"></span>
@@ -209,6 +210,11 @@
   <div id="lightboxCounter" class="image-lightbox-counter hidden"></div>
   <div id="lightboxCaption" class="image-lightbox-caption"></div>
 </div>
+<div id="commentNotificationPanel" class="comment-notification-panel hidden" role="dialog" aria-label="댓글 알림">
+  <div class="comment-notification-panel-head"><strong>댓글 알림</strong><button type="button" id="closeCommentNotifications" aria-label="닫기">×</button></div>
+  <div id="commentNotificationList" class="comment-notification-list"><div class="comment-notification-empty">알림을 불러오는 중입니다.</div></div>
+</div>
 <script src="app.js"></script>
+
 </body>
 </html>
