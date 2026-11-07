@@ -14,6 +14,8 @@ let currentProfile = null;
 let currentDate = new Date();
 let selectedDate = new Date();
 let allSchedules = [];
+let scheduleComments = {};
+let scheduleCommentsReady = false;
 let activeCategory = "all";
 let editingId = null;
 let lightboxImages = [];
@@ -270,10 +272,155 @@ function updateOpsDashboard(){
   if($("opsPeopleUpcoming"))$("opsPeopleUpcoming").innerHTML=upcoming.length?upcoming.map(r=>`<div class="ops-upcoming-row"><span class="ops-person-badge ${r.event_type==="퇴사"?"exit":"hire"}">${r.event_type==="퇴사"?"퇴사":"입차"}</span><span class="ops-upcoming-main"><strong>${escapeHtml(r.name)}</strong><small>${escapeHtml(r.region||"지역 미입력")} · ${escapeHtml(r.manager||"담당자 미지정")}</small></span><time>${escapeHtml(r.event_date)}</time></div>`).join(""):'<div class="ops-empty">예정된 입차·퇴사 항목이 없습니다.</div>';
 }
 
+let scheduleCommentsLoadPromise=null;
+async function loadScheduleComments(){
+  // 동시에 여러 화면 갱신이 호출되어도 댓글을 한 번만 읽고,
+  // 각 응답을 전역 배열에 누적하지 않고 완성된 목록으로 한 번에 교체합니다.
+  if(scheduleCommentsLoadPromise) return scheduleCommentsLoadPromise;
+  scheduleCommentsLoadPromise=(async()=>{
+    scheduleCommentsReady=false;
+    const ids=[...new Set(allSchedules.map(s=>s.id).filter(id=>id!==null&&id!==undefined).map(String))];
+    if(!ids.length){scheduleComments={};scheduleCommentsReady=true;return}
+    const {data,error}=await db.from("schedule_comments")
+      .select("id,schedule_id,parent_comment_id,comment,author_id,author_username,created_at,updated_at")
+      .in("schedule_id",ids).order("created_at",{ascending:true});
+    if(error){console.warn("일정 댓글을 불러오지 못했습니다. schedule_comments_setup.sql 실행 여부를 확인하세요.",error.message);return}
+    const nextComments={};
+    const seenIds=new Set();
+    (data||[]).forEach(row=>{
+      const rowId=String(row.id);
+      if(seenIds.has(rowId)) return;
+      seenIds.add(rowId);
+      const key=String(row.schedule_id);
+      (nextComments[key] ||= []).push(row);
+    });
+    scheduleComments=nextComments;
+    scheduleCommentsReady=true;
+  })();
+  try{return await scheduleCommentsLoadPromise}
+  finally{scheduleCommentsLoadPromise=null}
+}
+
+const scheduleCommentSubmitLocks=new Set();
+
+
+async function submitScheduleComment(scheduleId, form){
+  const lockKey=`root:${scheduleId}`;
+  if(scheduleCommentSubmitLocks.has(lockKey))return;
+  if(currentProfile?.role!=="admin"){alert("관리자만 새 일정 댓글을 작성할 수 있습니다.");return}
+  const input=form.querySelector("[name='comment']");
+  const comment=String(input?.value||"").trim();
+  if(!comment){alert("댓글 내용을 입력해주세요.");input?.focus();return}
+  const button=form.querySelector("button[type='submit']");
+  if(button){button.disabled=true;button.textContent="등록 중..."}
+  const {data,error}=await db.from("schedule_comments").insert({
+    schedule_id:scheduleId,parent_comment_id:null,comment,author_id:currentUser.id,
+    author_username:currentProfile.username||currentProfile.display_name||"관리자"
+  }).select("id").single();
+  if(error){alert("댓글 등록 실패: "+error.message+"\\nSQL 설정 파일을 실행했는지 확인해주세요.");if(button){button.disabled=false;button.textContent="댓글 등록"}return}
+  await loadScheduleComments();await loadCommentNotifications();renderScheduleList();
+}
+async function submitScheduleCommentReply(parentId, form){
+  const lockKey=`reply:${parentId}`;
+  if(scheduleCommentSubmitLocks.has(lockKey))return;
+  const input=form.querySelector("[name='reply']");
+  const comment=String(input?.value||"").trim();
+  if(!comment){alert("답글 내용을 입력해주세요.");input?.focus();return}
+  const parent=Object.values(scheduleComments).flat().find(c=>String(c.id)===String(parentId));
+  if(!parent){alert("원본 댓글을 찾을 수 없습니다.");return}
+  const button=form.querySelector("button[type='submit']");
+  scheduleCommentSubmitLocks.add(lockKey);
+  if(button){button.disabled=true;button.textContent="등록 중..."}
+  const {error}=await db.from("schedule_comments").insert({
+    schedule_id:parent.schedule_id,parent_comment_id:parent.id,comment,
+    author_id:currentUser.id,
+    author_username:currentProfile.username||currentProfile.display_name||(currentProfile.role==="admin"?"관리자":"사용자")
+  });
+  if(error){scheduleCommentSubmitLocks.delete(lockKey);alert("답글 등록 실패: "+error.message);if(button){button.disabled=false;button.textContent="답글 등록"}return}
+  await loadScheduleComments();await loadCommentNotifications();renderScheduleList();
+  scheduleCommentSubmitLocks.delete(lockKey);
+}
+let editingScheduleCommentId=null;
+function canManageScheduleComment(row){
+  return currentProfile?.role==="admin" || String(row.author_id)===String(currentUser?.id);
+}
+function editScheduleComment(commentId){
+  const row=Object.values(scheduleComments).flat().find(c=>String(c.id)===String(commentId));
+  if(!row || !canManageScheduleComment(row))return;
+  editingScheduleCommentId=String(commentId);
+  renderScheduleList();
+  const editor=document.querySelector(`[data-comment-edit-form="${commentId}"] textarea`);
+  editor?.focus();
+  editor?.setSelectionRange(editor.value.length,editor.value.length);
+}
+function cancelEditScheduleComment(){editingScheduleCommentId=null;renderScheduleList()}
+async function saveScheduleCommentEdit(commentId,form){
+  const row=Object.values(scheduleComments).flat().find(c=>String(c.id)===String(commentId));
+  if(!row || !canManageScheduleComment(row))return;
+  const input=form.querySelector("[name='edited_comment']"),comment=String(input?.value||"").trim();
+  if(!comment){input?.focus();return}
+  const button=form.querySelector("button[type='submit']");if(button){button.disabled=true;button.textContent="저장 중..."}
+  const {error}=await db.from("schedule_comments").update({comment,updated_at:new Date().toISOString()}).eq("id",commentId);
+  if(error){alert("댓글 수정 실패: "+error.message);if(button){button.disabled=false;button.textContent="저장"}return}
+  editingScheduleCommentId=null;await loadScheduleComments();renderScheduleList();
+}
+async function deleteScheduleComment(commentId){
+  const row=Object.values(scheduleComments).flat().find(c=>String(c.id)===String(commentId));
+  if(!row || !canManageScheduleComment(row))return;
+  const isRoot=!row.parent_comment_id;
+  if(!confirm(isRoot?"이 댓글과 연결된 답글을 모두 삭제할까요?":"이 답글을 삭제할까요?"))return;
+  const {error}=await db.from("schedule_comments").delete().eq("id",commentId);
+  if(error){alert("댓글 삭제 실패: "+error.message);return}
+  if(String(editingScheduleCommentId)===String(commentId))editingScheduleCommentId=null;
+  await loadScheduleComments();renderScheduleList();
+}
+let scheduleCommentNotifications=[];
+async function loadCommentNotifications(){
+  if(!currentUser?.id)return;
+  const {data,error}=await db.from("schedule_comment_notifications")
+    .select("id,schedule_id,comment_id,notification_type,message,is_read,created_at")
+    .eq("recipient_id",currentUser.id).order("created_at",{ascending:false}).limit(60);
+  if(error){console.warn("댓글 알림 불러오기 실패:",error.message);return}
+  scheduleCommentNotifications=data||[];renderCommentNotificationBell();
+}
+function renderCommentNotificationBell(){
+  const count=$("commentNotificationCount");if(!count)return;
+  const unread=scheduleCommentNotifications.filter(n=>!n.is_read).length;
+  count.textContent=unread>99?"99+":String(unread);count.classList.toggle("hidden",unread===0);
+}
+function renderCommentNotificationList(){
+  const list=$("commentNotificationList");if(!list)return;
+  if(!scheduleCommentNotifications.length){list.innerHTML='<div class="comment-notification-empty">새 댓글 알림이 없습니다.</div>';return}
+  list.innerHTML=scheduleCommentNotifications.map(n=>`<button type="button" class="comment-notification-item ${n.is_read?"read":"unread"}" data-comment-notification-id="${n.id}" data-comment-schedule-id="${n.schedule_id}"><span class="comment-notification-dot"></span><span class="comment-notification-copy"><strong>${n.notification_type==="comment_reply"?"새 답글":"새 댓글"}</strong><span>${escapeHtml(n.message||"일정에 새 댓글이 등록되었습니다.")}</span><time>${escapeHtml(new Date(n.created_at).toLocaleString("ko-KR",{dateStyle:"medium",timeStyle:"short"}))}</time></span></button>`).join("");
+}
+function toggleCommentNotifications(){
+  const panel=$("commentNotificationPanel");if(!panel)return;
+  const willOpen=panel.classList.contains("hidden");
+  if(willOpen){renderCommentNotificationList();panel.classList.remove("hidden");panel.setAttribute("aria-hidden","false");}
+  else closeCommentNotifications();
+}
+function closeCommentNotifications(){
+  const panel=$("commentNotificationPanel");
+  if(panel){panel.classList.add("hidden");panel.setAttribute("aria-hidden","true");}
+}
+async function openCommentNotification(notificationId,scheduleId){
+  const {error}=await db.from("schedule_comment_notifications").update({is_read:true,read_at:new Date().toISOString()}).eq("id",notificationId).eq("recipient_id",currentUser.id);
+  if(error)console.warn("알림 읽음 처리 실패:",error.message);
+  const n=scheduleCommentNotifications.find(x=>String(x.id)===String(notificationId));if(n)n.is_read=true;
+  renderCommentNotificationBell();closeCommentNotifications();
+  const schedule=allSchedules.find(s=>String(s.id)===String(scheduleId));
+  if(!schedule){alert("해당 일정이 삭제되었거나 접근 권한이 없습니다.");return}
+  selectedDate=new Date(schedule.schedule_date+"T12:00:00");currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);
+  activeCategory="all";document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));
+  document.querySelector('.filter[data-category="all"]')?.classList.add("active");
+  setWorkspaceView("calendar");renderCalendar();renderScheduleList();updateOverview();
+}
+
 async function loadSchedules(){
   const {data,error}=await db.from("schedules").select(`*, schedule_images(id,file_name,file_path,created_at)`).order("schedule_date",{ascending:true}).order("start_time",{ascending:true,nullsFirst:true});
   if(error){console.error(error);alert("일정을 불러오지 못했습니다.\n"+error.message);return}
   allSchedules=data||[];
+  await loadScheduleComments();
   updateSummary();
   renderCalendar();renderScheduleList();updateOverview();updateOpsDashboard();
 }
@@ -313,6 +460,28 @@ function renderCalendar(){
 
 function escapeHtml(v){return String(v??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"}[c]))}
 
+
+function renderScheduleComments(scheduleId){
+  const rows=scheduleComments[String(scheduleId)]||[];
+  const roots=rows.filter(row=>!row.parent_comment_id);
+  const editMarkup=row=>`<form class="schedule-comment-edit-form" data-comment-edit-form="${row.id}"><textarea name="edited_comment" maxlength="2000" rows="3">${escapeHtml(row.comment)}</textarea><div class="comment-edit-actions"><button type="submit">저장</button><button type="button" class="comment-cancel-edit" data-cancel-comment-edit>취소</button></div></form>`;
+  const replyMarkup=reply=>{
+    const editing=String(editingScheduleCommentId)===String(reply.id);
+    const actions=canManageScheduleComment(reply)?`<div class="comment-admin-actions"><button type="button" onclick="editScheduleComment(${reply.id})">수정</button><button type="button" onclick="deleteScheduleComment(${reply.id})">삭제</button></div>`:"";
+    return `<div class="schedule-comment schedule-comment-reply"><div class="schedule-comment-meta"><span class="comment-author-line"><span class="comment-avatar">${escapeHtml((reply.author_username||"사").slice(0,1).toUpperCase())}</span><strong>${escapeHtml(reply.author_username||"사용자")}</strong><em>답글</em></span><time>${escapeHtml(new Date(reply.created_at).toLocaleString("ko-KR",{dateStyle:"medium",timeStyle:"short"}))}${reply.updated_at?" · 수정됨":""}</time></div>${editing?editMarkup(reply):`<p>${escapeHtml(reply.comment)}</p>${actions}`}</div>`;
+  };
+  const commentsHtml=roots.length?roots.map(row=>{
+    const replies=rows.filter(reply=>String(reply.parent_comment_id)===String(row.id));
+    const editing=String(editingScheduleCommentId)===String(row.id);
+    const actions=canManageScheduleComment(row)?`<div class="comment-admin-actions"><button type="button" onclick="editScheduleComment(${row.id})">수정</button><button type="button" onclick="deleteScheduleComment(${row.id})">삭제</button></div>`:"";
+    const replyForm=`<form class="schedule-comment-reply-form" data-comment-reply-form="${row.id}"><textarea name="reply" maxlength="2000" rows="2" placeholder="이 댓글에 답글 남기기..."></textarea><button type="submit"><span>↩</span> 답글 등록</button></form>`;
+    return `<div class="schedule-comment-thread"><div class="schedule-comment schedule-comment-root"><div class="schedule-comment-meta"><span class="comment-author-line"><span class="comment-avatar main">${escapeHtml((row.author_username||"관").slice(0,1).toUpperCase())}</span><strong>${escapeHtml(row.author_username||"관리자")}</strong><em>원댓글</em></span><time>${escapeHtml(new Date(row.created_at).toLocaleString("ko-KR",{dateStyle:"medium",timeStyle:"short"}))}${row.updated_at?" · 수정됨":""}</time></div>${editing?editMarkup(row):`<p>${escapeHtml(row.comment)}</p>${actions}`}</div><div class="schedule-comment-replies">${replies.map(replyMarkup).join("")}</div>${replyForm}</div>`;
+  }).join(""):'<div class="schedule-comments-empty">아직 등록된 댓글이 없습니다.</div>';
+  const adminForm=currentProfile?.role==="admin"?`<form class="schedule-comment-form" data-comment-form="${escapeHtml(scheduleId)}"><textarea name="comment" maxlength="2000" rows="2" placeholder="이 일정에 대한 관리자 댓글을 입력하세요."></textarea><button type="submit">댓글 등록</button></form>`:"";
+  const setupWarning=!scheduleCommentsReady&&currentProfile?.role==="admin"?'<div class="schedule-comments-warning">댓글 기능을 사용하려면 SQL 설정 파일을 먼저 실행해주세요.</div>':"";
+  return `<section class="schedule-comments"><div class="schedule-comments-heading"><div><span class="comments-heading-kicker">DISCUSSION</span><strong>댓글 및 답글</strong></div><span class="comments-count">${rows.length}개</span></div>${setupWarning}${commentsHtml}${adminForm}</section>`;
+}
+
 function renderScheduleList(){
   const selected=dateString(selectedDate);
   let schedules=allSchedules.filter(s=>s.schedule_date===selected);
@@ -329,7 +498,7 @@ function renderScheduleList(){
     const author=s.author_username ? (s.author_display_name ? `${s.author_username} (${s.author_display_name})` : s.author_username) : "작성자 정보 없음";
     const imgs=(s.schedule_images||[]).map(i=>{const {data}=db.storage.from(BUCKET).getPublicUrl(i.file_path);return `<div class="image-card"><img src="${data.publicUrl}" alt="${escapeHtml(i.file_name)}"><a href="${data.publicUrl}?download=${encodeURIComponent(i.file_name)}" download>다운로드</a></div>`}).join("");
     const canManage=currentProfile?.role==="admin" || s.user_id===currentUser.id;
-    return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div><div class="schedule-author">작성자 · ${escapeHtml(author)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}</article>`;
+    return `<article class="schedule-item"><div class="schedule-row"><div><h3 class="schedule-title">${escapeHtml(s.title)}</h3><div class="schedule-meta"><span class="badge">${escapeHtml(s.category)}</span>${escapeHtml(time)}</div><div class="schedule-author">작성자 · ${escapeHtml(author)}</div></div>${canManage?`<div class="schedule-actions"><button class="small-btn" onclick="editSchedule(${s.id})">수정</button><button class="small-btn" onclick="deleteSchedule(${s.id})">삭제</button></div>`:""}</div>${s.description?`<div class="schedule-description">${escapeHtml(s.description)}</div>`:""}${imgs?`<div class="images">${imgs}</div>`:""}${renderScheduleComments(s.id)}</article>`;
   }).join("");
   const personnelHtml=personnel.map(r=>`<article class="schedule-item personnel-schedule-item ${r.event_type==="퇴사"?"resignation-item":"new-hire-item"}">
     <div class="schedule-row"><div><h3 class="schedule-title">${r.event_type==="퇴사"?"퇴사":"신규입차"} · ${escapeHtml(r.name)}</h3>
@@ -435,6 +604,7 @@ async function startApp(){
   $("authScreen").classList.add("hidden");$("appScreen").classList.remove("hidden");
   $("memberAdminCard").classList.toggle("hidden",currentProfile.role!=="admin");
   await loadSchedules();
+  await loadCommentNotifications();
   if(currentProfile.role==="admin"){await loadMembers();}
   if(currentProfile.role==="admin" || currentProfile.approval_status==="approved"){await loadPeople();}
   updateOpsDashboard();setWorkspaceView("overview");
@@ -449,6 +619,17 @@ if($("exportMembersBtn"))$("exportMembersBtn").onclick=exportMembersCSV;
 if($("exportSchedulesBtn"))$("exportSchedulesBtn").onclick=exportSchedulesCSV;
 if($("refreshAuditBtn"))$("refreshAuditBtn").onclick=loadAuditLogs;
 if($("notificationBtn"))$("notificationBtn").onclick=openNotifications;
+if($("commentNotificationBtn"))$("commentNotificationBtn").onclick=toggleCommentNotifications;
+if($("closeCommentNotifications"))$("closeCommentNotifications").onclick=closeCommentNotifications;
+if($("commentNotificationList"))$("commentNotificationList").onclick=e=>{
+  const item=e.target.closest("[data-comment-notification-id]");
+  if(item)openCommentNotification(item.dataset.commentNotificationId,item.dataset.commentScheduleId);
+};
+document.addEventListener("click",e=>{
+  const panel=$("commentNotificationPanel");
+  if(panel&&!panel.classList.contains("hidden")&&!e.target.closest("#commentNotificationPanel")&&!e.target.closest("#commentNotificationBtn"))closeCommentNotifications();
+});
+document.addEventListener("keydown",e=>{if(e.key==="Escape")closeCommentNotifications()});
 if($("closeNotifications"))$("closeNotifications").onclick=()=>$("notificationPanel").classList.add("hidden");
 if($("notificationList"))$("notificationList").onclick=e=>{const b=e.target.closest("[data-schedule-date]");if(!b)return;selectedDate=new Date(b.dataset.scheduleDate+"T12:00:00");currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);$("notificationPanel").classList.add("hidden");setWorkspaceView("calendar");renderCalendar();renderScheduleList();updateOverview()};
 fillRegionSelect($("personRegion"));fillRegionSelect($("peopleRegionFilter"),true);
@@ -531,4 +712,16 @@ document.addEventListener("keydown",e=>{
 initCategoryOptions();
 document.querySelectorAll(".filter").forEach(b=>b.onclick=()=>{activeCategory=b.dataset.category;document.querySelectorAll(".filter").forEach(x=>x.classList.remove("active"));b.classList.add("active");renderScheduleList()});
 
-(async()=>{if(SUPABASE_URL.includes("여기에_")||SUPABASE_PUBLISHABLE_KEY.includes("여기에_")){showAuthMessage("app.js에 Supabase URL과 Publishable key를 입력하세요.","error");return}await startApp()})();
+document.addEventListener("submit",event=>{
+  const form=event.target.closest("[data-comment-form]");
+  if(form){event.preventDefault();submitScheduleComment(form.dataset.commentForm,form);return}
+  const reply=event.target.closest("[data-comment-reply-form]");
+  if(reply){event.preventDefault();submitScheduleCommentReply(reply.dataset.commentReplyForm,reply);return}
+  const edit=event.target.closest("[data-comment-edit-form]");
+  if(edit){event.preventDefault();saveScheduleCommentEdit(edit.dataset.commentEditForm,edit)}
+});
+document.addEventListener("click",event=>{
+  if(event.target.closest("[data-cancel-comment-edit]")){editingScheduleCommentId=null;renderScheduleList()}
+});
+
+(async()=>{if(SUPABASE_URL.includes("여기에_")||SUPABASE_PUBLISHABLE_KEY.includes("여기에_")){showAuthMessage("app.js에 Supabase URL과 Publishable key를 입력하세요.","error");return}await startApp();setInterval(()=>{if(currentUser?.id&&!document.hidden)loadCommentNotifications()},20000)})();
