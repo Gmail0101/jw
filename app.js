@@ -549,35 +549,64 @@ function openModal(s=null){
   $("scheduleDate").value=s?.schedule_date||dateString(selectedDate);$("scheduleTitle").value=s?.title||"";setCategory(s?.category||"CPF 지원");
   $("startTime").value=s?.start_time?.slice(0,5)||"";$("endTime").value=s?.end_time?.slice(0,5)||"";$("scheduleDescription").value=s?.description||"";$("scheduleImages").value="";$("imagePreview").innerHTML="";$("modal").classList.remove("hidden");
 }
-function closeModal(){$("modal").classList.add("hidden");editingId=null}
+function closeModal(){if(scheduleSaveInProgress)return;$("modal").classList.add("hidden");editingId=null}
 
+let scheduleSaveInProgress=false;
+function setScheduleSaving(loading){
+  const form=$("scheduleForm");
+  const submit=form?.querySelector('button[type="submit"]');
+  const cancel=$("cancelBtn");
+  const close=$("closeModal");
+  const overlay=$("scheduleSavingOverlay");
+  if(submit){submit.disabled=loading;submit.dataset.originalText ||= submit.textContent;submit.textContent=loading?"저장 중...":(submit.dataset.originalText||"저장");}
+  if(cancel)cancel.disabled=loading;
+  if(close)close.disabled=loading;
+  if(overlay)overlay.classList.toggle("hidden",!loading);
+  if(form)form.setAttribute("aria-busy",loading?"true":"false");
+}
 async function saveSchedule(e){
   e.preventDefault();
+  if(scheduleSaveInProgress)return;
   const payload={schedule_date:$("scheduleDate").value,title:$("scheduleTitle").value.trim(),category:$("scheduleCategory").value,start_time:$("startTime").value||null,end_time:$("endTime").value||null,description:$("scheduleDescription").value.trim()||null};
   const authorPayload={user_id:currentUser.id,author_username:currentProfile?.username||null,author_display_name:currentProfile?.display_name||null};
   if(!payload.title){alert("제목을 입력해주세요.");return}
+  if(!payload.schedule_date){alert("날짜를 선택해주세요.");return}
   let scheduleId=editingId;
-  if(editingId){
-    const existing=allSchedules.find(x=>x.id===editingId);
-    if(!existing){alert("일정을 찾을 수 없습니다.");return}
-    if(currentProfile?.role!=="admin" && existing.user_id!==currentUser.id){alert("본인이 등록한 일정만 수정할 수 있습니다.");return}
-    const {error}=await db.from("schedules").update({...payload,updated_at:new Date().toISOString()}).eq("id",editingId);
-    if(error){alert("수정 실패: "+error.message);return}
-    await writeAudit("update","schedule",editingId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
-  }else{
-    const {data,error}=await db.from("schedules").insert({...payload,...authorPayload}).select().single();
-    if(error){alert("등록 실패: "+error.message);return}
-    scheduleId=data.id;
-    await writeAudit("create","schedule",scheduleId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
+  scheduleSaveInProgress=true;
+  setScheduleSaving(true);
+  try{
+    if(editingId){
+      const existing=allSchedules.find(x=>x.id===editingId);
+      if(!existing){alert("일정을 찾을 수 없습니다.");return}
+      if(currentProfile?.role!=="admin" && existing.user_id!==currentUser.id){alert("본인이 등록한 일정만 수정할 수 있습니다.");return}
+      const {error}=await db.from("schedules").update({...payload,updated_at:new Date().toISOString()}).eq("id",editingId);
+      if(error)throw new Error("수정 실패: "+error.message);
+      await writeAudit("update","schedule",editingId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
+    }else{
+      const {data,error}=await db.from("schedules").insert({...payload,...authorPayload}).select().single();
+      if(error)throw new Error("등록 실패: "+error.message);
+      scheduleId=data.id;
+      await writeAudit("create","schedule",scheduleId,{title:payload.title,category:payload.category,schedule_date:payload.schedule_date});
+    }
+    const files=Array.from($("scheduleImages").files||[]);
+    for(let index=0;index<files.length;index++){
+      const file=files[index];
+      const safe=file.name.replace(/[^a-zA-Z0-9가-힣._-]/g,"_"),path=`${scheduleId}/${Date.now()}_${crypto.randomUUID()}_${safe}`;
+      const {error:up}=await db.storage.from(BUCKET).upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type});
+      if(up)throw new Error(`이미지 업로드 실패 (${index+1}/${files.length}): ${up.message}`);
+      const {error:ie}=await db.from("schedule_images").insert({schedule_id:scheduleId,file_name:file.name,file_path:path});
+      if(ie)throw new Error(`이미지 정보 저장 실패 (${index+1}/${files.length}): ${ie.message}`);
+    }
+    selectedDate=new Date(payload.schedule_date+"T00:00:00");currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);
+    closeModal();
+    await loadSchedules();
+  }catch(error){
+    console.error("일정 저장 오류:",error);
+    alert(error.message||"일정 저장 중 오류가 발생했습니다.");
+  }finally{
+    scheduleSaveInProgress=false;
+    setScheduleSaving(false);
   }
-  for(const file of Array.from($("scheduleImages").files||[])){
-    const safe=file.name.replace(/[^a-zA-Z0-9가-힣._-]/g,"_"),path=`${scheduleId}/${Date.now()}_${crypto.randomUUID()}_${safe}`;
-    const {error:up}=await db.storage.from(BUCKET).upload(path,file,{cacheControl:"3600",upsert:false,contentType:file.type});
-    if(up){alert("이미지 업로드 실패: "+up.message);continue}
-    const {error:ie}=await db.from("schedule_images").insert({schedule_id:scheduleId,file_name:file.name,file_path:path});
-    if(ie)alert("이미지 정보 저장 실패: "+ie.message);
-  }
-  selectedDate=new Date(payload.schedule_date+"T00:00:00");currentDate=new Date(selectedDate.getFullYear(),selectedDate.getMonth(),1);closeModal();await loadSchedules();
 }
 
 async function deleteSchedule(id){
